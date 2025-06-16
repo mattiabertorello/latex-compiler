@@ -1,0 +1,62 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\title{Cross-References Test}
+\author{Docker Test Suite}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+\label{sec:intro}
+This document tests cross-referencing capabilities, which require multiple compilation passes.
+
+\section{Sections and Labels}
+\label{sec:sections}
+This is Section~\ref{sec:sections}. We can also reference the Introduction in Section~\ref{sec:intro}.
+
+\subsection{Subsection Example}
+\label{subsec:example}
+This subsection can be referenced as Subsection~\ref{subsec:example}.
+
+\section{Figures and Tables}
+\label{sec:figures}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+Item & Value \\
+\hline
+Alpha & 1.0 \\
+Beta & 2.5 \\
+Gamma & 3.7 \\
+\hline
+\end{tabular}
+\caption{Sample data table}
+\label{tab:sample}
+\end{table}
+
+Table~\ref{tab:sample} shows some sample data that we reference from Section~\ref{sec:figures}.
+
+\section{Equations}
+\label{sec:equations}
+
+The famous equation is shown in Equation~\ref{eq:einstein}:
+
+\begin{equation}
+E = mc^2
+\label{eq:einstein}
+\end{equation}
+
+We can reference Equation~\ref{eq:einstein} from anywhere in the document.
+
+\section{Conclusion}
+This document successfully demonstrates cross-referencing between Section~\ref{sec:intro}, Section~\ref{sec:sections}, Section~\ref{sec:figures}, and Section~\ref{sec:equations}.
+
+\end{document}

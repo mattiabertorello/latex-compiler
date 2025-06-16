@@ -1,0 +1,21 @@
+# Full LaTeX packages
+enumitem
+hyperref
+geometry
+titlesec
+xcolor
+url
+graphics
+tools
+amsmath
+amscls
+babel
+parskip
+listings
+texliveonfly
+fontspec
+tikz
+booktabs
+graphicx
+caption
+fancyhdr

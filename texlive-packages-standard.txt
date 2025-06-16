@@ -1,0 +1,19 @@
+# Standard LaTeX packages
+enumitem
+hyperref
+geometry
+xcolor
+titlesec
+url
+graphics
+tools
+amsmath
+amscls
+babel
+parskip
+listings
+fontspec
+booktabs
+graphicx
+caption
+fancyhdr

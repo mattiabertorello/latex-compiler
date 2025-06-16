@@ -1,0 +1,62 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\geometry{margin=1in}
+
+\title{Minimal Package Test}
+\author{Docker Test Suite}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Geometry Package Test}
+This document uses custom margins set by the geometry package.
+
+\section{Color Test}
+\textcolor{red}{This text is red}, \textcolor{blue}{this text is blue}, and \textcolor{green}{this text is green}.
+
+\section{Enhanced Lists with enumitem}
+\begin{itemize}[label=\textbullet, itemsep=0.5em]
+    \item First item with custom spacing
+    \item Second item with custom spacing
+    \item Third item with custom spacing
+\end{itemize}
+
+\begin{enumerate}[label=(\alph*), start=1]
+    \item First alphabetic item
+    \item Second alphabetic item
+    \item Third alphabetic item
+\end{enumerate}
+
+\section{Hyperref Test}
+This document contains a link to \href{https://www.latex-project.org/}{The LaTeX Project}.
+
+You can also reference sections: see Section~\ref{sec:titlesec}.
+
+\section{Title Formatting with titlesec}
+\label{sec:titlesec}
+
+\titlesec{\subsection}{\normalfont\large\bfseries\color{blue}}{\thesubsection}{1em}{}
+
+\subsection{Custom Formatted Subsection}
+This subsection title should appear in blue due to titlesec formatting.
+
+\section{Conclusion}
+All minimal packages are working correctly:
+\begin{itemize}
+    \item \textcolor{green}{\checkmark} geometry - custom page layout
+    \item \textcolor{green}{\checkmark} hyperref - links and references
+    \item \textcolor{green}{\checkmark} xcolor - colored text
+    \item \textcolor{green}{\checkmark} enumitem - enhanced lists
+    \item \textcolor{green}{\checkmark} titlesec - custom section formatting
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,13 @@
+month,temperature,humidity,rainfall,sales
+January,18.5,65.2,45.3,52
+February,21.2,62.8,38.7,58
+March,25.4,58.9,52.1,65
+April,28.7,55.4,78.9,72
+May,32.1,48.7,95.6,68
+June,35.2,42.3,125.4,75
+July,37.8,38.9,142.7,82
+August,36.4,41.2,138.9,79
+September,33.1,46.8,98.3,73
+October,29.3,52.1,67.4,69
+November,24.6,58.7,48.2,61
+December,20.1,63.4,41.8,55

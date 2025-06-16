@@ -1,0 +1,59 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\title{Basic LaTeX Test}
+\author{Docker Test Suite}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This is a basic test document to verify that the LaTeX compiler can handle fundamental LaTeX features.
+
+\section{Text Formatting}
+This paragraph tests \textbf{bold text}, \textit{italic text}, \underline{underlined text}, and \texttt{monospace text}.
+
+\subsection{Lists}
+Unordered list:
+\begin{itemize}
+    \item First item
+    \item Second item
+    \item Third item
+\end{itemize}
+
+Ordered list:
+\begin{enumerate}
+    \item First numbered item
+    \item Second numbered item
+    \item Third numbered item
+\end{enumerate}
+
+\section{Mathematics}
+Inline math: $E = mc^2$ and $\pi \approx 3.14159$.
+
+Display math:
+\[
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+\]
+
+\section{Tables}
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+Column 1 & Column 2 & Column 3 \\
+\hline
+Data 1 & Data 2 & Data 3 \\
+Data 4 & Data 5 & Data 6 \\
+\hline
+\end{tabular}
+\caption{Basic table test}
+\end{table}
+
+\section{Conclusion}
+This document successfully tests basic LaTeX functionality including text formatting, lists, mathematics, and tables.
+
+\end{document}

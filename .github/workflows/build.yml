@@ -1,0 +1,173 @@
+name: Build Docker Images
+
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        required: true
+        type: string
+      build_date:
+        required: true
+        type: string
+      should_release:
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/latex-compiler
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix: ${{ fromJson(inputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get TeX Live version
+        id: texlive-version
+        run: |
+          # Build a temporary image to get TeX Live version
+          docker build --build-arg PACKAGE_LIST=${{ matrix.texlive_packages }} --build-arg APT_PACKAGES=${{ matrix.apt_packages }} -t temp-latex-${{ matrix.variant }} .
+          TEXLIVE_VERSION=$(docker run --rm temp-latex-${{ matrix.variant }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && tex --version' | head -1 | grep -oE "20[0-9]{2}" | head -1)
+          echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
+          echo "TeX Live version detected: ${TEXLIVE_VERSION}"
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # For minimal variant (default)
+            type=raw,value=latest,enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
+            type=raw,value=${{ steps.texlive-version.outputs.version }},enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
+            type=raw,value=${{ steps.texlive-version.outputs.version }}-${{ inputs.build_date }},suffix=${{ matrix.tags_suffix }}
+            # Branch and PR tags
+            type=ref,event=branch,suffix=${{ matrix.tags_suffix }}
+            type=ref,event=pr,suffix=${{ matrix.tags_suffix }}
+            type=sha,prefix={{branch}}-,suffix=${{ matrix.tags_suffix }}
+            # Scheduled builds
+            type=schedule,pattern={{date 'YYYYMMDD'}},suffix=${{ matrix.tags_suffix }}
+          labels: |
+            org.opencontainers.image.title=LaTeX Compiler (${{ matrix.variant }})
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.vendor=Mattia Bertorello
+            org.opencontainers.image.version=${{ steps.texlive-version.outputs.version }}
+            latex.variant=${{ matrix.variant }}
+            latex.texlive.version=${{ steps.texlive-version.outputs.version }}
+            latex.build.date=${{ inputs.build_date }}
+
+      - name: Check if image exists
+        id: check
+        run: |
+          # Check if we should skip build (only for push events, not manual or scheduled)
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.event.inputs.force_rebuild }}" != "true" ]]; then
+            # Try to pull the image with the current SHA
+            if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }} >/dev/null 2>&1; then
+              echo "Image already exists for this commit and variant"
+              echo "skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "Image does not exist, will build"
+              echo "skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Manual trigger or scheduled build, will build"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Docker image
+        if: steps.check.outputs.skip != 'true'
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.variant }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
+          build-args: |
+            PACKAGE_LIST=${{ matrix.texlive_packages }}
+            APT_PACKAGES=${{ matrix.apt_packages }}
+
+      - name: Generate artifact attestation
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Generate package manifest
+        if: steps.check.outputs.skip != 'true'
+        id: manifest
+        run: |
+          # Create package manifest
+          mkdir -p manifests
+          
+          # Get installed packages from the built image
+          echo "# LaTeX Compiler - ${{ matrix.variant }} variant" > manifests/packages-${{ matrix.variant }}.md
+          echo "**Build Date:** ${{ inputs.build_date }}" >> manifests/packages-${{ matrix.variant }}.md
+          echo "**TeX Live Version:** ${{ steps.texlive-version.outputs.version }}" >> manifests/packages-${{ matrix.variant }}.md
+          echo "" >> manifests/packages-${{ matrix.variant }}.md
+          
+          echo "## System Packages (APT)" >> manifests/packages-${{ matrix.variant }}.md
+          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          cat ${{ matrix.apt_packages }} | grep -v '^#' | grep -v '^$' >> manifests/packages-${{ matrix.variant }}.md
+          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          echo "" >> manifests/packages-${{ matrix.variant }}.md
+          
+          echo "## LaTeX Packages (TeX Live)" >> manifests/packages-${{ matrix.variant }}.md
+          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          cat ${{ matrix.texlive_packages }} | grep -v '^#' | grep -v '^$' >> manifests/packages-${{ matrix.variant }}.md
+          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          echo "" >> manifests/packages-${{ matrix.variant }}.md
+          
+          # Get detailed package info from the image
+          echo "## Installed TeX Live Collections" >> manifests/packages-${{ matrix.variant }}.md
+          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }} \
+            bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && tlmgr list --only-installed | grep "collection-"' >> manifests/packages-${{ matrix.variant }}.md || true
+          echo '' >> manifests/packages-${{ matrix.variant }}.md
+
+      - name: Upload manifest artifact
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: package-manifest-${{ matrix.variant }}
+          path: manifests/packages-${{ matrix.variant }}.md
+
+      - name: Image summary
+        run: |
+          if [[ "${{ steps.check.outputs.skip }}" == "true" ]]; then
+            echo "## 🐳 Docker Image (${{ matrix.variant }})" >> $GITHUB_STEP_SUMMARY
+            echo "Image already exists for this commit - skipped build" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 🐳 Docker Image Built and Pushed (${{ matrix.variant }})" >> $GITHUB_STEP_SUMMARY
+            echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Image:** ${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Variant:** ${{ matrix.variant }}" >> $GITHUB_STEP_SUMMARY
+            echo "**TeX Live Version:** ${{ steps.texlive-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+            echo '${{ steps.meta.outputs.tags }}' | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+          fi

@@ -1,0 +1,78 @@
+name: Prepare Build Matrix
+
+on:
+  workflow_call:
+    outputs:
+      matrix:
+        description: 'Build matrix for variants'
+        value: ${{ jobs.prepare.outputs.matrix }}
+      build_date:
+        description: 'Build date'
+        value: ${{ jobs.prepare.outputs.build_date }}
+      should_release:
+        description: 'Whether to create a release'
+        value: ${{ jobs.prepare.outputs.should_release }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      build_date: ${{ steps.date.outputs.date }}
+      should_release: ${{ steps.check-release.outputs.should_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set build date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: Set up build matrix
+        id: set-matrix
+        run: |
+          # Define the build matrix with package variants
+          matrix=$(cat << 'EOF'
+          {
+            "include": [
+              {
+                "variant": "minimal",
+                "texlive_packages": "texlive-packages-minimal.txt",
+                "apt_packages": "apt-packages-minimal.txt",
+                "texlive_profile": "texlive-profile-minimal.txt",
+                "tags_suffix": "",
+                "description": "Minimal LaTeX compiler with essential packages",
+                "test_suites": ["basic", "minimal"]
+              },
+              {
+                "variant": "standard", 
+                "texlive_packages": "texlive-packages-standard.txt",
+                "apt_packages": "apt-packages-standard.txt",
+                "texlive_profile": "texlive-profile-standard.txt",
+                "tags_suffix": "-standard",
+                "description": "Standard LaTeX compiler with common packages for everyday use",
+                "test_suites": ["basic", "minimal", "standard"]
+              },
+              {
+                "variant": "full", 
+                "texlive_packages": "texlive-packages-full.txt",
+                "apt_packages": "apt-packages-full.txt",
+                "texlive_profile": "texlive-profile-full.txt",
+                "tags_suffix": "-full",
+                "description": "Full LaTeX compiler with comprehensive package set",
+                "test_suites": ["basic", "minimal", "standard", "full", "advanced"]
+              }
+            ]
+          }
+          EOF
+          )
+          echo "matrix=$(echo $matrix | jq -c .)" >> $GITHUB_OUTPUT
+
+      - name: Check if should create release
+        id: check-release
+        run: |
+          if [[ "${{ github.event_name }}" == "schedule" ]] || [[ "${{ github.event.inputs.force_rebuild }}" == "true" ]]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi

@@ -1,0 +1,60 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/**'
+      - 'texlive-packages*.txt'
+      - 'apt-packages*.txt'
+      - 'texlive-profile*.txt'
+      - 'compile.sh'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/**'
+      - 'texlive-packages*.txt'
+      - 'apt-packages*.txt'
+      - 'texlive-profile*.txt'
+      - 'compile.sh'
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild even without changes'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Monthly rebuild to get latest TeX Live updates (first Sunday of each month at 2 AM UTC)
+    - cron: '0 2 1-7 * 0'
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/prepare.yml
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      matrix: ${{ needs.prepare.outputs.matrix }}
+      build_date: ${{ needs.prepare.outputs.build_date }}
+      should_release: ${{ needs.prepare.outputs.should_release }}
+    secrets: inherit
+
+  test:
+    needs: [prepare, build]
+    uses: ./.github/workflows/test.yml
+    with:
+      matrix: ${{ needs.prepare.outputs.matrix }}
+    secrets: inherit
+
+  publish:
+    needs: [prepare, build, test]
+    uses: ./.github/workflows/publish.yml
+    with:
+      matrix: ${{ needs.prepare.outputs.matrix }}
+      build_date: ${{ needs.prepare.outputs.build_date }}
+      should_release: ${{ needs.prepare.outputs.should_release }}
+    secrets: inherit

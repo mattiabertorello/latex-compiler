@@ -1,0 +1,108 @@
+\documentclass[12pt,a4paper]{article}
+
+% Test basic packages
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{babel}
+\usepackage{parskip}
+
+% Page setup
+\geometry{margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Standard LaTeX Test}
+\fancyhead[R]{\thepage}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
+
+\title{\textcolor{blue}{Testing Standard \LaTeX{} Installation}}
+\author{Automated Test}
+\date{\today}
+
+\begin{document}
+
+    \maketitle
+
+    \section{Introduction}
+    This document tests various features of the standard \LaTeX{} installation.
+
+    \section{Lists and Enumeration}
+    \subsection{Bullet Points}
+    \begin{itemize}
+        \item First item
+        \item Second item
+        \item Third item with \textcolor{red}{colored text}
+    \end{itemize}
+
+    \subsection{Numbered List}
+    \begin{enumerate}[label=\Alph*.]
+        \item First item
+        \item Second item
+        \item Third item
+    \end{enumerate}
+
+    \section{Mathematics}
+    The quadratic formula is:
+    \begin{equation}
+        x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+    \end{equation}
+
+    And a matrix example:
+    \begin{equation}
+        A = \begin{pmatrix}
+                1 & 2 & 3 \\
+                4 & 5 & 6 \\
+                7 & 8 & 9
+        \end{pmatrix}
+    \end{equation}
+
+    \section{Tables}
+    \begin{table}[h]
+        \centering
+        \caption{A simple table with booktabs}
+        \begin{tabular}{lcc}
+            \toprule
+            Item & Quantity & Price (\$) \\
+            \midrule
+            Apples & 5 & 2.50 \\
+            Oranges & 3 & 3.75 \\
+            Bananas & 6 & 1.20 \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \section{Figures}
+    \begin{figure}[h]
+        \centering
+        % This will fail if no image is available, but that's expected
+        % You can create a simple image with the commands in the test script
+        \includegraphics[width=0.5\textwidth]{test-image.png}
+        \caption{Test image (this will show an error if no image is available)}
+    \end{figure}
+
+    \section{Code Listing}
+    \begin{lstlisting}[language=Python, caption=Sample Python code]
+def hello_world():
+    print("Hello, LaTeX world!")
+
+if __name__ == "__main__":
+    hello_world()
+    \end{lstlisting}
+
+    \section{Hyperlinks}
+    Visit \href{https://www.latex-project.org/}{the \LaTeX{} project website}.
+
+\end{document}

@@ -1,0 +1,12 @@
+# Full set of additional packages
+curl
+fontconfig
+ghostscript
+imagemagick
+python3-minimal
+python-is-python3
+python3-pygments
+build-essential
+unzip
+grep
+sed

@@ -1,0 +1,346 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{siunitx}
+
+\usetikzlibrary{patterns}
+\pgfplotsset{compat=1.18}
+
+\geometry{margin=1in}
+
+\title{Advanced Data Visualization with TikZ and CSV}
+\author{Docker Test Suite}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This document demonstrates advanced plotting capabilities by reading data from external CSV files and creating various types of visualizations using TikZ and PGFPlots.
+
+\section{Loading and Displaying CSV Data}
+
+First, let's load our data and display it in a table format:
+
+\pgfplotstableread[col sep=comma]{assets/data.csv}\datatable
+
+\begin{table}[h]
+\centering
+\caption{Raw data from CSV file}
+\pgfplotstabletypeset[
+    columns/month/.style={column name=Month, string type},
+    columns/temperature/.style={column name=Temperature (\si{\celsius}), precision=1},
+    columns/humidity/.style={column name=Humidity (\%), precision=1},
+    columns/rainfall/.style={column name=Rainfall (mm), precision=1},
+    columns/sales/.style={column name=Sales (k\$), precision=0},
+    every head row/.style={before row=\toprule, after row=\midrule},
+    every last row/.style={after row=\bottomrule}
+]{\datatable}
+\end{table}
+
+\section{Line Plots from CSV Data}
+
+\subsection{Temperature and Humidity Over Time}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Monthly Temperature and Humidity},
+    xlabel={Month},
+    ylabel={Temperature (\si{\celsius}) / Humidity (\%)},
+    width=12cm,
+    height=8cm,
+    grid=major,
+    legend pos=north west,
+    xtick=data,
+    xticklabels from table={\datatable}{month},
+    x tick label style={rotate=45, anchor=east},
+    ymin=0,
+    ymax=100
+]
+
+\addplot[blue, thick, mark=*, mark size=3pt] table[x expr=\coordindex, y=temperature] {\datatable};
+\addlegendentry{Temperature}
+
+\addplot[red, thick, mark=square*, mark size=3pt] table[x expr=\coordindex, y=humidity] {\datatable};
+\addlegendentry{Humidity}
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Rainfall Data}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Monthly Rainfall},
+    xlabel={Month},
+    ylabel={Rainfall (mm)},
+    width=12cm,
+    height=6cm,
+    grid=major,
+    xtick=data,
+    xticklabels from table={\datatable}{month},
+    x tick label style={rotate=45, anchor=east},
+    ymin=0
+]
+
+\addplot[green!70!black, thick, mark=triangle*, mark size=4pt, fill=green!20]
+    table[x expr=\coordindex, y=rainfall] {\datatable};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\section{Bar Charts from CSV Data}
+
+\subsection{Sales Data Bar Chart}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Monthly Sales Performance},
+    xlabel={Month},
+    ylabel={Sales (thousands \$)},
+    width=12cm,
+    height=8cm,
+    ybar,
+    bar width=15pt,
+    grid=major,
+    xtick=data,
+    xticklabels from table={\datatable}{month},
+    x tick label style={rotate=45, anchor=east},
+    ymin=0,
+    nodes near coords,
+    nodes near coords align={vertical}
+]
+
+\addplot[fill=blue!50, draw=blue!80!black] table[x expr=\coordindex, y=sales] {\datatable};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Comparative Bar Chart}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Temperature vs Sales Comparison},
+    xlabel={Month},
+    ylabel={Normalized Values},
+    width=12cm,
+    height=8cm,
+    ybar,
+    bar width=8pt,
+    grid=major,
+    xtick=data,
+    xticklabels from table={\datatable}{month},
+    x tick label style={rotate=45, anchor=east},
+    ymin=0,
+    legend pos=north west
+]
+
+% Normalize temperature to 0-100 scale for comparison
+\addplot[fill=red!50, draw=red!80!black] table[x expr=\coordindex, y expr=\thisrow{temperature}*2] {\datatable};
+\addlegendentry{Temperature (×2)}
+
+% Sales data (already in good scale)
+\addplot[fill=blue!50, draw=blue!80!black] table[x expr=\coordindex, y=sales] {\datatable};
+\addlegendentry{Sales (k\$)}
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\section{Scatter Plots and Correlations}
+
+\subsection{Temperature vs Sales Correlation}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Temperature vs Sales Correlation},
+    xlabel={Temperature (\si{\celsius})},
+    ylabel={Sales (k\$)},
+    width=10cm,
+    height=8cm,
+    grid=major,
+    legend pos=north west
+]
+
+\addplot[only marks, mark=*, mark size=4pt, blue] table[x=temperature, y=sales] {\datatable};
+\addlegendentry{Data Points}
+
+% Add trend line (approximate)
+\addplot[red, thick, domain=15:35] {1.5*x + 25};
+\addlegendentry{Trend Line}
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Multi-dimensional Scatter Plot}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Humidity vs Rainfall (Size = Sales)},
+    xlabel={Humidity (\%)},
+    ylabel={Rainfall (mm)},
+    width=10cm,
+    height=8cm,
+    grid=major,
+    scatter,
+    scatter src=explicit,
+    colormap/viridis
+]
+
+\addplot[scatter, only marks,
+    point meta=explicit,
+    scatter/use mapped color={draw=black, fill=mapped color}]
+table[x=humidity, y=rainfall, meta=sales] {\datatable};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\section{Advanced Visualizations}
+
+\subsection{Polar Plot}
+\begin{center}
+\begin{tikzpicture}
+\begin{polaraxis}[
+    title={Seasonal Data Pattern},
+    grid=major,
+    width=10cm,
+    height=10cm
+]
+
+\addplot[blue, thick, mark=*, mark size=3pt] table[x expr=\coordindex*30, y=temperature] {\datatable};
+\addlegendentry{Temperature}
+
+\end{polaraxis}
+\end{tikzpicture}
+\end{center}
+
+\subsection{Stacked Area Chart}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Cumulative Environmental Factors},
+    xlabel={Month},
+    ylabel={Cumulative Values},
+    width=12cm,
+    height=8cm,
+    stack plots=y,
+    area style,
+    xtick=data,
+    xticklabels from table={\datatable}{month},
+    x tick label style={rotate=45, anchor=east},
+    legend pos=north west
+]
+
+\addplot[fill=blue!30, draw=blue] table[x expr=\coordindex, y=temperature] {\datatable} \closedcycle;
+\addlegendentry{Temperature}
+
+\addplot[fill=red!30, draw=red] table[x expr=\coordindex, y expr=\thisrow{humidity}/2] {\datatable} \closedcycle;
+\addlegendentry{Humidity/2}
+
+\addplot[fill=green!30, draw=green] table[x expr=\coordindex, y expr=\thisrow{rainfall}/5] {\datatable} \closedcycle;
+\addlegendentry{Rainfall/5}
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\section{Statistical Analysis}
+
+\subsection{Box Plot Simulation}
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    title={Data Distribution Summary},
+    xlabel={Metrics},
+    ylabel={Values},
+    width=12cm,
+    height=8cm,
+    symbolic x coords={Temperature, Humidity, Rainfall, Sales},
+    xtick=data,
+    grid=major,
+    boxplot/draw direction=y
+]
+
+% Simulated box plots using our data
+\addplot[boxplot prepared={
+    median=25,
+    upper quartile=30,
+    lower quartile=20,
+    upper whisker=35,
+    lower whisker=15
+}, fill=blue!20] coordinates {};
+\addplot[boxplot prepared={
+    median=65,
+    upper quartile=75,
+    lower quartile=55,
+    upper whisker=85,
+    lower whisker=45
+}, fill=red!20] coordinates {};
+\addplot[boxplot prepared={
+    median=80,
+    upper quartile=120,
+    lower quartile=40,
+    upper whisker=150,
+    lower whisker=20
+}, fill=green!20] coordinates {};
+\addplot[boxplot prepared={
+    median=65,
+    upper quartile=75,
+    lower quartile=55,
+    upper whisker=85,
+    lower whisker=45
+}, fill=orange!20] coordinates {};
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\section{Data Summary Statistics}
+
+Let's calculate some basic statistics from our CSV data:
+
+\pgfplotstablecreatecol[
+    create col/expr={\thisrow{temperature} + \thisrow{humidity}/10}
+]{comfort_index}{\datatable}
+
+\begin{table}[h]
+\centering
+\caption{Calculated comfort index (Temperature + Humidity/10)}
+\pgfplotstabletypeset[
+    columns/month/.style={column name=Month, string type},
+    columns/temperature/.style={column name=Temp, precision=1},
+    columns/humidity/.style={column name=Humidity, precision=1},
+    columns/comfort_index/.style={column name=Comfort Index, precision=2},
+    every head row/.style={before row=\toprule, after row=\midrule},
+    every last row/.style={after row=\bottomrule},
+    columns={month,temperature,humidity,comfort_index}
+]{\datatable}
+\end{table}
+
+\section{Conclusion}
+This document successfully demonstrates:
+\begin{itemize}
+    \item Reading external CSV data files
+    \item Creating various plot types (line, bar, scatter, polar)
+    \item Data manipulation and calculations
+    \item Advanced visualization techniques
+    \item Statistical representations
+    \item Professional data presentation
+\end{itemize}
+
+All CSV reading and plotting functionality is working correctly with the TikZ and PGFPlots packages in the full variant.
+
+\end{document}

@@ -1,0 +1,9 @@
+# Standard additional packages
+curl
+fontconfig
+ghostscript
+python3-minimal
+python-is-python3
+unzip
+grep
+sed

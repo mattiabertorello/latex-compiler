@@ -1,0 +1,98 @@
+name: Test Docker Images
+
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/latex-compiler
+
+jobs:
+  test-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(inputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run test suites
+        run: |
+          # Create results directory
+          mkdir -p test-results/${{ matrix.variant }}
+          
+          # Run each test suite for this variant
+          for test_suite in $(echo '${{ toJson(matrix.test_suites) }}' | jq -r '.[]'); do
+            echo "🧪 Running test suite: $test_suite for variant: ${{ matrix.variant }}"
+            
+            # Check if test suite directory exists
+            if [ ! -d "tests/$test_suite" ]; then
+              echo "⚠️  Test suite directory tests/$test_suite not found, skipping"
+              continue
+            fi
+            
+            # Run all LaTeX files in the test suite
+            for tex_file in tests/$test_suite/*.tex; do
+              if [ -f "$tex_file" ]; then
+                echo "📄 Testing: $tex_file"
+                base_name=$(basename "$tex_file" .tex)
+                
+                # Copy test file to working directory
+                cp "$tex_file" ./
+                
+                # Copy any additional files (images, bibliography, etc.)
+                if [ -d "tests/$test_suite/assets" ]; then
+                  cp -r tests/$test_suite/assets/* ./ 2>/dev/null || true
+                fi
+                
+                # Run compilation
+                if docker run --rm -v $(pwd):/data ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }} \
+                   compile.sh -i "$base_name.tex" -c; then
+                  echo "✅ Test passed: $tex_file"
+                  
+                  # Move PDF to results directory
+                  if [ -f "$base_name.pdf" ]; then
+                    mv "$base_name.pdf" "test-results/${{ matrix.variant }}/${test_suite}-${base_name}.pdf"
+                  fi
+                else
+                  echo "❌ Test failed: $tex_file"
+                  exit 1
+                fi
+                
+                # Clean up
+                rm -f "$base_name.tex"
+                rm -f *.aux *.log *.out *.fls *.fdb_latexmk *.synctex.gz 2>/dev/null || true
+              fi
+            done
+          done
+          
+          echo "🎉 All tests passed for variant: ${{ matrix.variant }}"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.variant }}
+          path: test-results/${{ matrix.variant }}/
+
+      - name: Test summary
+        run: |
+          echo "## 🧪 Tests Completed (${{ matrix.variant }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Variant:** ${{ matrix.variant }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Suites:** ${{ join(matrix.test_suites, ', ') }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Generated PDFs:**" >> $GITHUB_STEP_SUMMARY
+          ls -la test-results/${{ matrix.variant }}/ | grep '\.pdf$' | awk '{print "- " $9}' >> $GITHUB_STEP_SUMMARY || echo "- No PDFs generated" >> $GITHUB_STEP_SUMMARY

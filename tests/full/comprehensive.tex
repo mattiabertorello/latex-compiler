@@ -1,0 +1,117 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{url}
+
+\geometry{margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Comprehensive Test}
+\fancyhead[R]{\thepage}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    breaklines=true
+}
+
+\title{Comprehensive Package Test}
+\author{Docker Test Suite}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Advanced Mathematics with AMS packages}
+
+\subsection{Complex Equations}
+\begin{align}
+\nabla \times \vec{E} &= -\frac{\partial \vec{B}}{\partial t} \\
+\nabla \times \vec{B} &= \mu_0\vec{J} + \mu_0\epsilon_0\frac{\partial \vec{E}}{\partial t} \\
+\nabla \cdot \vec{E} &= \frac{\rho}{\epsilon_0} \\
+\nabla \cdot \vec{B} &= 0
+\end{align}
+
+\subsection{Special Symbols}
+Mathematical symbols: $\mathbb{R}$, $\mathbb{C}$, $\mathbb{N}$, $\mathbb{Z}$, $\mathbb{Q}$
+
+Special operators: $\forall$, $\exists$, $\in$, $\notin$, $\subset$, $\supset$, $\cap$, $\cup$
+
+\section{Professional Tables with booktabs}
+\begin{table}[h]
+\centering
+\caption{Professional table formatting}
+\begin{tabular}{lrr}
+\toprule
+Method & \multicolumn{1}{c}{Time (s)} & \multicolumn{1}{c}{Accuracy (\%)} \\
+\midrule
+Algorithm A & 1.23 & 95.4 \\
+Algorithm B & 2.45 & 97.8 \\
+Algorithm C & 0.89 & 93.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Code Listings}
+\begin{lstlisting}[language=Python, caption=Python code example]
+def fibonacci(n):
+    """Calculate the nth Fibonacci number."""
+    if n <= 1:
+        return n
+    else:
+        return fibonacci(n-1) + fibonacci(n-2)
+
+# Example usage
+for i in range(10):
+    print(f"F({i}) = {fibonacci(i)}")
+\end{lstlisting}
+
+\section{URLs and Links}
+Visit the LaTeX project at \url{https://www.latex-project.org/} or click \href{https://ctan.org/}{CTAN} for packages.
+
+\section{Custom Headers and Footers}
+This document uses fancyhdr for custom headers showing the document title and page numbers.
+
+\section{Enhanced Captions}
+\captionsetup{font=small, labelfont=bf}
+
+\begin{table}[h]
+\centering
+\caption{Table with enhanced caption formatting}
+\begin{tabular}{cc}
+\toprule
+Column 1 & Column 2 \\
+\midrule
+Data A & Data B \\
+Data C & Data D \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Conclusion}
+All full variant packages are working correctly:
+\begin{itemize}[label=\textcolor{green}{$\checkmark$}]
+    \item amsmath \& amssymb - advanced mathematics
+    \item booktabs - professional tables
+    \item listings - code formatting
+    \item fancyhdr - custom headers/footers
+    \item caption - enhanced captions
+    \item url - URL formatting
+    \item graphicx - graphics support (ready for images)
+\end{itemize}
+
+\end{document}

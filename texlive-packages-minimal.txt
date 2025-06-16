@@ -1,0 +1,6 @@
+# Minimal LaTeX packages
+enumitem
+hyperref
+geometry
+xcolor
+titlesec

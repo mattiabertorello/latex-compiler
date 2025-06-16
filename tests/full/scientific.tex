@@ -1,0 +1,151 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[section]
+
+\title{Scientific Document Test}
+\author{Docker Test Suite}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document tests scientific writing capabilities including theorems, proofs, complex mathematics, and structured scientific content formatting.
+\end{abstract}
+
+\section{Mathematical Foundations}
+
+\begin{definition}[Metric Space]
+A metric space is an ordered pair $(M, d)$ where $M$ is a set and $d$ is a metric on $M$, i.e., a function
+\[
+d: M \times M \to \mathbb{R}
+\]
+satisfying the following axioms for all $x, y, z \in M$:
+\begin{enumerate}
+    \item $d(x, y) \geq 0$ (non-negativity)
+    \item $d(x, y) = 0 \iff x = y$ (identity of indiscernibles)
+    \item $d(x, y) = d(y, x)$ (symmetry)
+    \item $d(x, z) \leq d(x, y) + d(y, z)$ (triangle inequality)
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Banach Fixed Point Theorem]
+\label{thm:banach}
+Let $(X, d)$ be a non-empty complete metric space with a contraction mapping $T: X \to X$. Then $T$ admits a unique fixed-point $x^*$ in $X$ (i.e., $T(x^*) = x^*$).
+\end{theorem}
+
+\begin{proof}
+Let $x_0 \in X$ be arbitrary and define the sequence $(x_n)$ by $x_{n+1} = T(x_n)$ for $n \geq 0$.
+
+Since $T$ is a contraction, there exists $0 \leq q < 1$ such that
+\[
+d(T(x), T(y)) \leq q \cdot d(x, y)
+\]
+for all $x, y \in X$.
+
+We can show that $(x_n)$ is a Cauchy sequence:
+\[
+d(x_{n+1}, x_n) = d(T(x_n), T(x_{n-1})) \leq q \cdot d(x_n, x_{n-1}) \leq q^n \cdot d(x_1, x_0)
+\]
+
+Since $X$ is complete, the sequence converges to some $x^* \in X$. By continuity of $T$:
+\[
+x^* = \lim_{n \to \infty} x_{n+1} = \lim_{n \to \infty} T(x_n) = T(x^*)
+\]
+
+Uniqueness follows from the contraction property.
+\end{proof}
+
+\begin{corollary}
+Every contraction mapping on a complete metric space has exactly one fixed point.
+\end{corollary}
+
+\section{Complex Analysis}
+
+\begin{lemma}[Cauchy-Riemann Equations]
+Let $f(z) = u(x,y) + iv(x,y)$ be a complex function. If $f$ is differentiable at $z_0 = x_0 + iy_0$, then:
+\begin{align}
+\frac{\partial u}{\partial x} &= \frac{\partial v}{\partial y} \\
+\frac{\partial u}{\partial y} &= -\frac{\partial v}{\partial x}
+\end{align}
+\end{lemma}
+
+\section{Statistical Analysis}
+
+The probability density function of a normal distribution is:
+\[
+f(x|\mu,\sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} e^{-\frac{(x-\mu)^2}{2\sigma^2}}
+\]
+
+\begin{table}[h]
+\centering
+\caption{Statistical test results}
+\begin{tabular}{lrrr}
+\toprule
+Test & Statistic & p-value & Significance \\
+\midrule
+t-test & 2.345 & 0.023 & * \\
+ANOVA & 4.567 & 0.001 & ** \\
+Chi-square & 12.34 & $< 0.001$ & *** \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Matrix Operations}
+
+Consider the eigenvalue problem:
+\[
+A\mathbf{v} = \lambda\mathbf{v}
+\]
+
+For a $2 \times 2$ matrix:
+\[
+A = \begin{pmatrix}
+a & b \\
+c & d
+\end{pmatrix}
+\]
+
+The characteristic polynomial is:
+\[
+\det(A - \lambda I) = \lambda^2 - (a+d)\lambda + (ad-bc) = 0
+\]
+
+\begin{remark}
+The trace of $A$ is $\text{tr}(A) = a + d$ and the determinant is $\det(A) = ad - bc$.
+\end{remark}
+
+\section{Conclusion}
+This document successfully demonstrates scientific writing capabilities including:
+\begin{itemize}
+    \item Mathematical theorems and proofs
+    \item Complex mathematical notation
+    \item Scientific document structure
+    \item Professional theorem environments
+    \item Statistical and matrix notation
+\end{itemize}
+
+All scientific packages are functioning correctly as verified by Theorem~\ref{thm:banach} and related mathematical content.
+
+\end{document}

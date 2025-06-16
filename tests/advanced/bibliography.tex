@@ -1,0 +1,35 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{url}
+
+\geometry{margin=1in}
+\bibliographystyle{plainnat}
+
+\title{Bibliography and Citations Test}
+\author{Docker Test Suite}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This document tests bibliography and citation functionality. Citations are essential for academic and scientific documents \citep{knuth1984texbook}.
+
+\section{Different Citation Styles}
+We can cite works in different ways:
+\begin{itemize}
+    \item Parenthetical citation: \citep{lamport1994latex}
+    \item Textual citation: \citet{goossens1993latex} wrote about advanced LaTeX techniques
+    \item Multiple citations: \citep{knuth1984texbook, lamport1994latex, goossens1993latex}
+    \item Citation with page numbers: \citep[p.~123]{knuth1984texbook}
+    \item Citation with prefix: \citep[see][]{lamport1994latex}
+\end{itemize}
+
+\section{Academic References}
+The foundations of typesetting were established by \citet{knuth1984texbook}, while practical LaTeX usage was documented by \citet{lamport1994latex}. Advanced techniques are covered in \citet{goossens1993latex}.
+
