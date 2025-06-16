@@ -41,40 +41,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get TeX Live version
-        id: texlive-version
-        run: |
-          # Build a temporary image to get TeX Live version
-          docker build --build-arg PACKAGE_LIST=${{ matrix.texlive_packages }} --build-arg APT_PACKAGES=${{ matrix.apt_packages }} -t temp-latex-${{ matrix.variant }} .
-          TEXLIVE_VERSION=$(docker run --rm temp-latex-${{ matrix.variant }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && tex --version' | head -1 | grep -oE "20[0-9]{2}" | head -1)
-          echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
-          echo "TeX Live version detected: ${TEXLIVE_VERSION}"
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            # For minimal variant (default)
-            type=raw,value=latest,enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
-            type=raw,value=${{ steps.texlive-version.outputs.version }},enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
-            type=raw,value=${{ steps.texlive-version.outputs.version }}-${{ inputs.build_date }},suffix=${{ matrix.tags_suffix }}
-            # Branch and PR tags
-            type=ref,event=branch,suffix=${{ matrix.tags_suffix }}
-            type=ref,event=pr,suffix=${{ matrix.tags_suffix }}
-            type=sha,prefix={{branch}}-,suffix=${{ matrix.tags_suffix }}
-            # Scheduled builds
-            type=schedule,pattern={{date 'YYYYMMDD'}},suffix=${{ matrix.tags_suffix }}
-          labels: |
-            org.opencontainers.image.title=LaTeX Compiler (${{ matrix.variant }})
-            org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.vendor=Mattia Bertorello
-            org.opencontainers.image.version=${{ steps.texlive-version.outputs.version }}
-            latex.variant=${{ matrix.variant }}
-            latex.texlive.version=${{ steps.texlive-version.outputs.version }}
-            latex.build.date=${{ inputs.build_date }}
-
       - name: Check if image exists
         id: check
         run: |
@@ -93,7 +59,60 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and push Docker image
+      # Build a small image just to extract the TeX Live version
+      - name: Build and extract TeX Live version
+        if: steps.check.outputs.skip != 'true'
+        id: texlive-version
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: temp-latex-${{ matrix.variant }}:latest
+          cache-from: type=gha,scope=${{ matrix.variant }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
+          build-args: |
+            PACKAGE_LIST=${{ matrix.texlive_packages }}
+            APT_PACKAGES=${{ matrix.apt_packages }}
+          outputs: type=docker
+
+      - name: Get TeX Live version from image
+        if: steps.check.outputs.skip != 'true'
+        id: get-version
+        run: |
+          TEXLIVE_VERSION=$(docker run --rm temp-latex-${{ matrix.variant }}:latest bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && tex --version' | head -1 | grep -oE "20[0-9]{2}" | head -1)
+          echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
+          echo "TeX Live version detected: ${TEXLIVE_VERSION}"
+
+      - name: Extract metadata
+        if: steps.check.outputs.skip != 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # For minimal variant (default)
+            type=raw,value=latest,enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
+            type=raw,value=${{ steps.get-version.outputs.version }},enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
+            type=raw,value=${{ steps.get-version.outputs.version }}-${{ inputs.build_date }},suffix=${{ matrix.tags_suffix }}
+            # Branch and PR tags
+            type=ref,event=branch,suffix=${{ matrix.tags_suffix }}
+            type=ref,event=pr,suffix=${{ matrix.tags_suffix }}
+            type=sha,prefix={{branch}}-,suffix=${{ matrix.tags_suffix }}
+            # Scheduled builds
+            type=schedule,pattern={{date 'YYYYMMDD'}},suffix=${{ matrix.tags_suffix }}
+          labels: |
+            org.opencontainers.image.title=LaTeX Compiler (${{ matrix.variant }})
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.vendor=Mattia Bertorello
+            org.opencontainers.image.version=${{ steps.get-version.outputs.version }}
+            latex.variant=${{ matrix.variant }}
+            latex.texlive.version=${{ steps.get-version.outputs.version }}
+            latex.build.date=${{ inputs.build_date }}
+
+      - name: Build and push Docker image for all platforms
         if: steps.check.outputs.skip != 'true'
         id: build
         uses: docker/build-push-action@v5
@@ -104,7 +123,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.variant }}
+          cache-from: |
+            type=gha,scope=${{ matrix.variant }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
           build-args: |
             PACKAGE_LIST=${{ matrix.texlive_packages }}
@@ -128,25 +149,25 @@ jobs:
           # Get installed packages from the built image
           echo "# LaTeX Compiler - ${{ matrix.variant }} variant" > manifests/packages-${{ matrix.variant }}.md
           echo "**Build Date:** ${{ inputs.build_date }}" >> manifests/packages-${{ matrix.variant }}.md
-          echo "**TeX Live Version:** ${{ steps.texlive-version.outputs.version }}" >> manifests/packages-${{ matrix.variant }}.md
+          echo "**TeX Live Version:** ${{ steps.get-version.outputs.version }}" >> manifests/packages-${{ matrix.variant }}.md
           echo "" >> manifests/packages-${{ matrix.variant }}.md
           
           echo "## System Packages (APT)" >> manifests/packages-${{ matrix.variant }}.md
           echo '' >> manifests/packages-${{ matrix.variant }}.md
-          cat ${{ matrix.apt_packages }} | grep -v '^#' | grep -v '^$' >> manifests/packages-${{ matrix.variant }}.md
+          cat ${{ matrix.apt_packages }} | grep -v '^#' | grep -v '^``` >> manifests/packages-${{ matrix.variant }}.md
           echo '' >> manifests/packages-${{ matrix.variant }}.md
           echo "" >> manifests/packages-${{ matrix.variant }}.md
           
           echo "## LaTeX Packages (TeX Live)" >> manifests/packages-${{ matrix.variant }}.md
           echo '' >> manifests/packages-${{ matrix.variant }}.md
-          cat ${{ matrix.texlive_packages }} | grep -v '^#' | grep -v '^$' >> manifests/packages-${{ matrix.variant }}.md
+          cat ${{ matrix.texlive_packages }} | grep -v '^#' | grep -v '^``` >> manifests/packages-${{ matrix.variant }}.md
           echo '' >> manifests/packages-${{ matrix.variant }}.md
           echo "" >> manifests/packages-${{ matrix.variant }}.md
           
-          # Get detailed package info from the image
+          # Get detailed package info from the image - use the already built temp image
           echo "## Installed TeX Live Collections" >> manifests/packages-${{ matrix.variant }}.md
           echo '' >> manifests/packages-${{ matrix.variant }}.md
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }} \
+          docker run --rm temp-latex-${{ matrix.variant }}:latest \
             bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && tlmgr list --only-installed | grep "collection-"' >> manifests/packages-${{ matrix.variant }}.md || true
           echo '' >> manifests/packages-${{ matrix.variant }}.md
 
@@ -156,6 +177,7 @@ jobs:
         with:
           name: package-manifest-${{ matrix.variant }}
           path: manifests/packages-${{ matrix.variant }}.md
+
       - name: Image summary
         run: |
           if [[ "${{ steps.check.outputs.skip }}" == "true" ]]; then
@@ -166,7 +188,7 @@ jobs:
             echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
             echo "**Image:** ${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
             echo "**Variant:** ${{ matrix.variant }}" >> $GITHUB_STEP_SUMMARY
-            echo "**TeX Live Version:** ${{ steps.texlive-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "**TeX Live Version:** ${{ steps.get-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
             echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
             echo '${{ steps.meta.outputs.tags }}' | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
           fi
