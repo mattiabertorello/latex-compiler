@@ -152,11 +152,10 @@ jobs:
 
       - name: Upload manifest artifact
         if: steps.check.outputs.skip != 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: package-manifest-${{ matrix.variant }}
           path: manifests/packages-${{ matrix.variant }}.md
-
       - name: Image summary
         run: |
           if [[ "${{ steps.check.outputs.skip }}" == "true" ]]; then
