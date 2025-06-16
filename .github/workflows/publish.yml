@@ -12,6 +12,9 @@ on:
       should_release:
         required: true
         type: string
+      base_image_tag:
+        required: true
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -45,9 +48,9 @@ jobs:
       - name: Get TeX Live version
         id: texlive-version
         run: |
-          # Get version from one of the built images
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}
-          TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && tex --version' | head -1 | grep -oE "20[0-9]{2}" | head -1)
+          # Get version from the base image
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }}
+          TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && echo $LIVE_YEAR')
           echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create release notes
@@ -115,6 +118,7 @@ jobs:
           - Updated to TeX Live ${{ steps.texlive-version.outputs.version }}
           - Refreshed all package repositories
           - Updated base system packages
+          - Optimized build process with multi-stage Docker builds
           - Verified compilation functionality with automated test suites
           EOF
 
@@ -159,41 +163,31 @@ jobs:
           # Get all package versions with their creation dates
           PACKAGE_VERSIONS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions?per_page=100" | \
-            jq -r '.[] | {id: .id, created_at: .created_at, digest: .name}')
+            jq -r '.[] | {id: .id, created_at: .created_at, digest: .name, tags: .metadata.container.tags}')
           
           # Sort versions by creation date (newest first)
           SORTED_VERSIONS=$(echo "$PACKAGE_VERSIONS" | jq -s 'sort_by(.created_at) | reverse')
           
-          # Get unique image digests
-          UNIQUE_DIGESTS=$(echo "$SORTED_VERSIONS" | jq -r '.[].digest' | sort -u)
+          # Keep the latest N non-base images and delete the rest
+          echo "Identifying images to keep and delete..."
           
-          # Count unique images
-          UNIQUE_COUNT=$(echo "$UNIQUE_DIGESTS" | wc -l)
-          echo "Found $UNIQUE_COUNT unique images"
+          # Keep all images that don't have "-base" in their tags
+          KEEP_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base") | not) | all) | .id' | head -n $KEEP_LAST_N)
           
-          if [ $UNIQUE_COUNT -gt $KEEP_LAST_N ]; then
-            # Keep track of digests to keep
-            DIGESTS_TO_KEEP=$(echo "$UNIQUE_DIGESTS" | head -n $KEEP_LAST_N)
-            echo "Keeping the $KEEP_LAST_N most recent unique images"
+          # Also keep the latest base image
+          LATEST_BASE_ID=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base")) | any) | .id' | head -n 1)
           
-            # Find versions to delete (those with digests not in the keep list)
-            VERSIONS_TO_DELETE=$(echo "$SORTED_VERSIONS" | jq -r --arg keep "$(echo $DIGESTS_TO_KEEP | tr '\n' '|' | sed 's/|$//')" \
-              '.[] | select(.digest | test($keep) | not) | .id')
+          # Combine IDs to keep
+          ALL_KEEP_IDS="$KEEP_IDS $LATEST_BASE_ID"
           
-            # Count versions to delete
-            DELETE_COUNT=$(echo "$VERSIONS_TO_DELETE" | wc -l)
-            echo "Deleting $DELETE_COUNT older versions"
+          # Get all IDs
+          ALL_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[].id')
           
-            # Delete older versions
-            for VERSION_ID in $VERSIONS_TO_DELETE; do
-              echo "Deleting version ID: $VERSION_ID"
-              curl -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions/$VERSION_ID"
-              # Add a small delay to avoid rate limiting
-              sleep 0.5
-            done
-          else
-            echo "Only $UNIQUE_COUNT unique images found, which is less than or equal to the keep limit ($KEEP_LAST_N). No cleanup needed."
-          fi
+          # Find IDs to delete (those not in the keep list)
+          DELETE_IDS=$(comm -23 <(echo "$ALL_IDS" | sort) <(echo "$ALL_KEEP_IDS" | tr ' ' '\n' | sort))
           
-          echo "Image cleanup completed."
+          # Count versions to delete
+          DELETE_COUNT=$(echo "$DELETE_IDS" | wc -l)
+          echo "Deleting $DELETE_COUNT older versions"
+          
+          # Delete older versions

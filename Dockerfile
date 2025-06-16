@@ -1,68 +1,38 @@
-FROM ubuntu:latest
-LABEL maintainer="Mattia Bertorello <mattiabertorello@gmail.com>"
-ENV DEBIAN_FRONTEND=noninteractive
-WORKDIR /data
+# Use the base image
+FROM base AS builder
 
-# Accept build arguments package lists
+# Accept build arguments for customization
 ARG APT_PACKAGES=apt-packages-minimal.txt
+ARG TEXLIVE_PROFILE=texlive-profile-minimal.txt
+ARG PACKAGE_LIST=texlive-packages-minimal.txt
+ARG TARGETARCH
 
-# Install core system dependencies (always needed)
-RUN apt-get update -q && \
-    apt-get install -qy \
-    wget \
-    perl \
-    perl-doc \
-    libfontconfig1 \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
 
-# Copy and install additional apt packages from file
+# Copy configuration files
 COPY ${APT_PACKAGES} /tmp/apt-packages.txt
+COPY ${TEXLIVE_PROFILE} /tmp/texlive.profile
+COPY ${PACKAGE_LIST} /tmp/texlive-packages.txt
+
+# Install additional apt packages
 RUN apt-get update -q && \
-    # Install packages from file (filtering out comments and empty lines)
     apt-get install -qy $(grep -v '^#' /tmp/apt-packages.txt | grep -v '^$') && \
     rm -rf /var/lib/apt/lists/* && \
     rm /tmp/apt-packages.txt
 
-# Copy the TexLive profile
-ARG TEXLIVE_PROFILE=texlive-profile-minimal.txt
-COPY ${TEXLIVE_PROFILE} /tmp/texlive.profile
-
-# Install TeX Live and packages in one step
-RUN wget https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz && \
-    mkdir /install-tl-unx && \
-    tar -xf install-tl-unx.tar.gz -C /install-tl-unx --strip-components=1 && \
-    export PLATFORM=$(/install-tl-unx/install-tl --print-platform) && \
-    export LIVE_YEAR=$(/install-tl-unx/install-tl --version | grep -Eo "20[0-9]{2}") && \
+# Install TeX Live with profile
+RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
     export LIVE_FOLDER=/usr/local/texlive/$LIVE_YEAR && \
     export LIVE_BIN=${LIVE_FOLDER}/bin/$PLATFORM && \
     echo "LIVE_FOLDER=${LIVE_FOLDER}" >> /etc/environment && \
     echo "LIVE_BIN=${LIVE_BIN}" >> /etc/environment && \
-    echo "PATH=${LIVE_BIN}:$PATH" >> /etc/environment && \
     cp /tmp/texlive.profile /install-tl-unx/texlive.profile && \
     /install-tl-unx/install-tl -profile /install-tl-unx/texlive.profile && \
-    rm -rf /install-tl-unx install-tl-unx.tar.gz /tmp/texlive.profile && \
-    # Clean up
-    rm -rf ${LIVE_FOLDER}/tlpkg/backups/*.tar.xz && \
-    rm -rf ${LIVE_FOLDER}/texmf-var/web2c/tlmgr.log ${LIVE_FOLDER}/texmf-var/web2c/tlmgr-commands.log  && \
-    # Create symlink for easier access
-    ln -sf ${LIVE_BIN} /usr/texbin
-
-# Configure tlmgr (separate layer for better caching)
-RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
-    tlmgr option docfiles 0 && \
-    tlmgr update --self
-
-# Accept build arguments package lists
-ARG PACKAGE_LIST=texlive-packages-minimal.txt
-
-# Copy package list (this will invalidate cache only when packages change)
-COPY ${PACKAGE_LIST} /tmp/texlive-packages.txt
-
-# Install LaTeX packages from file (this layer rebuilds only when packages change)
-RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
-    # Install packages from file (filtering out comments and empty lines)
-    grep -v '^#' /tmp/texlive-packages.txt | grep -v '^$' | xargs tlmgr -v install || \
+    # Configure tlmgr
+    ${LIVE_BIN}/tlmgr option docfiles 0 && \
+    ${LIVE_BIN}/tlmgr update --self && \
+    # Install packages
+    grep -v '^#' /tmp/texlive-packages.txt | grep -v '^$' | xargs ${LIVE_BIN}/tlmgr -v install || \
     { echo "==== TLMGR INSTALLATION FAILED ===="; \
       echo "==== tlmgr.log ===="; \
       cat ${LIVE_FOLDER}/texmf-var/web2c/tlmgr.log; \
@@ -70,15 +40,41 @@ RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
       cat ${LIVE_FOLDER}/texmf-var/web2c/tlmgr-commands.log; \
       exit 1; \
     } && \
-    # Clean up \
+    # Clean up
     rm -rf ${LIVE_FOLDER}/tlpkg/backups/*.tar.xz && \
     rm -rf ${LIVE_FOLDER}/texmf-var/web2c/tlmgr.log ${LIVE_FOLDER}/texmf-var/web2c/tlmgr-commands.log && \
-    rm -rf /tmp/texlive-packages.txt
+    rm -rf /tmp/texlive-packages.txt /tmp/texlive.profile && \
+    rm -rf /install-tl-unx
 
+# Final image with minimal layers
+FROM ubuntu:latest
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /data
+
+# Copy apt packages list for documentation
+ARG APT_PACKAGES=apt-packages-minimal.txt
+COPY ${APT_PACKAGES} /etc/latex-compiler/apt-packages.txt
+
+# Install only the runtime dependencies
+RUN apt-get update -q && \
+    apt-get install -qy \
+    libfontconfig1 \
+    perl \
+    $(grep -v '^#' /etc/latex-compiler/apt-packages.txt | grep -v '^$') && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy TeX Live from builder
+COPY --from=builder /usr/local/texlive /usr/local/texlive
+COPY --from=builder /etc/environment /etc/environment
 
 # Copy the compilation helper script
 COPY compile.sh /usr/local/bin/compile.sh
 RUN chmod +x /usr/local/bin/compile.sh
+
+# Set up symlinks and PATH
+RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
+    ln -sf ${LIVE_BIN} /usr/texbin && \
+    echo "PATH=/usr/texbin:$PATH" >> /etc/environment
 
 # Set PATH for TeX Live
 ENV PATH="/usr/texbin:$PATH"

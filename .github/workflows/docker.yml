@@ -5,6 +5,7 @@ on:
     branches: [ main, master ]
     paths:
       - 'Dockerfile'
+      - 'base.Dockerfile'
       - '.github/workflows/**'
       - 'texlive-packages*.txt'
       - 'apt-packages*.txt'
@@ -14,6 +15,7 @@ on:
     branches: [ main, master ]
     paths:
       - 'Dockerfile'
+      - 'base.Dockerfile'
       - '.github/workflows/**'
       - 'texlive-packages*.txt'
       - 'apt-packages*.txt'
@@ -45,6 +47,7 @@ jobs:
       matrix: ${{ needs.prepare.outputs.matrix }}
       build_date: ${{ needs.prepare.outputs.build_date }}
       should_release: ${{ needs.prepare.outputs.should_release }}
+      base_image_tag: ${{ needs.prepare.outputs.base_image_tag }}
     secrets: inherit
     permissions:
       contents: read
@@ -55,6 +58,7 @@ jobs:
     uses: ./.github/workflows/test.yml
     with:
       matrix: ${{ needs.prepare.outputs.matrix }}
+      base_image_tag: ${{ needs.prepare.outputs.base_image_tag }}
     secrets: inherit
 
   publish:
@@ -64,6 +68,7 @@ jobs:
       matrix: ${{ needs.prepare.outputs.matrix }}
       build_date: ${{ needs.prepare.outputs.build_date }}
       should_release: ${{ needs.prepare.outputs.should_release }}
+      base_image_tag: ${{ needs.prepare.outputs.base_image_tag }}
     secrets: inherit
     permissions:
       contents: write
