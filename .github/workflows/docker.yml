@@ -36,6 +36,7 @@ permissions:
   contents: read
   packages: write
   id-token: write # This is required for requesting the JWT
+  attestations: write
 
 jobs:
   prepare:
@@ -53,7 +54,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write # This is required for requesting the JWT
+      id-token: write
+      attestations: write
 
   test:
     needs: [prepare, build]
