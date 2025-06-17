@@ -35,7 +35,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine image tag and cache sources
+      - name: Determine image tag
         id: image-tag
         run: |
           # For testing, we need to use the variant images, not the base image
@@ -48,10 +48,6 @@ jobs:
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "Using image tag: ${TAG}"
-          
-          # Set up cache sources for potential fallback builds
-          CACHE_SOURCES="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }}"
-          echo "cache_sources=${CACHE_SOURCES}" >> $GITHUB_OUTPUT
 
       - name: Pull and verify image
         id: pull-image
@@ -59,49 +55,44 @@ jobs:
           IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}"
           echo "Attempting to pull image: ${IMAGE_TAG}"
           
-          # Try to pull the image with cache consideration
-          if docker pull "${IMAGE_TAG}"; then
+          if docker pull "${IMAGE_TAG}}"; then
             echo "✅ Successfully pulled image: ${IMAGE_TAG}"
             echo "image_available=true" >> $GITHUB_OUTPUT
-            echo "final_tag=${{ steps.image-tag.outputs.tag }}" >> $GITHUB_OUTPUT
           else
             echo "❌ Failed to pull image: ${IMAGE_TAG}"
-            echo "Let's check what images are available..."
-          
-            # Try alternative tag formats with cache sources
-            ALT_TAG1="${{ github.ref_name }}-${{ github.sha }}"
-            ALT_TAG2="${{ inputs.base_image_tag }}"
-            ALT_TAG3="${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }}"
-          
-            echo "Trying alternative tags with cache consideration..."
-          
-            # Try to pull cache sources first to optimize subsequent operations
-            echo "Pre-pulling cache sources..."
-            docker pull "${{ steps.image-tag.outputs.cache_sources }}" || true
-          
-            if docker pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ALT_TAG1}"; then
-              echo "✅ Found image with tag: ${ALT_TAG1}"
-              echo "final_tag=${ALT_TAG1}" >> $GITHUB_OUTPUT
-              echo "image_available=true" >> $GITHUB_OUTPUT
-            elif docker pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ALT_TAG3}"; then
-              echo "✅ Found image with tag: ${ALT_TAG3}"
-              echo "final_tag=${ALT_TAG3}" >> $GITHUB_OUTPUT
-              echo "image_available=true" >> $GITHUB_OUTPUT
-            elif docker pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${ALT_TAG2}"; then
-              echo "✅ Found base image with tag: ${ALT_TAG2}"
-              echo "final_tag=${ALT_TAG2}" >> $GITHUB_OUTPUT
-              echo "image_available=true" >> $GITHUB_OUTPUT
-            else
-              echo "❌ No suitable image found"
-              echo "image_available=false" >> $GITHUB_OUTPUT
-              exit 1
-            fi
+            echo "image_available=false" >> $GITHUB_OUTPUT
+            exit 1
           fi
+
+      - name: Debug container filesystem and PATH
+        if: steps.pull-image.outputs.image_available == 'true'
+        run: |
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}"
+          echo "🔍 Debugging container filesystem and PATH"
+          
+          # Check PATH environment variable
+          echo "Container PATH:"
+          docker run --rm "${IMAGE_TAG}" env | grep PATH
+          
+          # Check if compile.sh exists in expected locations
+          echo "Checking for compile.sh in /usr/local/bin:"
+          docker run --rm "${IMAGE_TAG}" ls -la /usr/local/bin/
+          
+          echo "Checking for compile.sh in root directory:"
+          docker run --rm "${IMAGE_TAG}" ls -la /
+          
+          # Try to find compile.sh anywhere in the container
+          echo "Searching for compile.sh in the container:"
+          docker run --rm "${IMAGE_TAG}" find / -name "compile.sh" 2>/dev/null || echo "No compile.sh found"
+          
+          # Check if the script is executable
+          echo "Checking if compile.sh is executable (if found):"
+          docker run --rm "${IMAGE_TAG}" bash -c "find / -name 'compile.sh' -exec ls -la {} \; 2>/dev/null" || echo "No compile.sh found"
 
       - name: Verify image layers and cache efficiency
         if: steps.pull-image.outputs.image_available == 'true'
         run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pull-image.outputs.final_tag }}"
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}"
           echo "🔍 Inspecting image layers for: ${IMAGE_TAG}"
           
           # Show image information
@@ -111,14 +102,14 @@ jobs:
           # Show layer information
           docker history "${IMAGE_TAG}" --format "table {{.CreatedBy}}\t{{.Size}}" | head -10
 
-      - name: Run test suites
+      - name: Run test suites with modified command
         if: steps.pull-image.outputs.image_available == 'true'
         run: |
           # Create results directory
           mkdir -p test-results/${{ matrix.variant }}
           
-          # Use the final determined tag
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pull-image.outputs.final_tag }}"
+          # Use the image tag
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}"
           echo "Testing image: ${IMAGE_TAG}"
           
           # Run each test suite for this variant
@@ -145,9 +136,11 @@ jobs:
                   cp -r tests/$test_suite/assets/* ./ 2>/dev/null || true
                 fi
           
-                # Run compilation with optimized container reuse
-                if docker run --rm -v $(pwd):/data "${IMAGE_TAG}" \
-                   compile.sh -i "$base_name.tex" -c; then
+                # Try running with different approaches to find compile.sh
+                echo "Attempting to run compilation..."
+          
+                # Try with direct path if found in debug step
+                if docker run --rm -v $(pwd):/data "${IMAGE_TAG}" bash -c "if [ -f /usr/local/bin/compile.sh ]; then /usr/local/bin/compile.sh -i \"$base_name.tex\" -c; elif [ -f /compile.sh ]; then /compile.sh -i \"$base_name.tex\" -c; else echo 'compile.sh not found'; exit 1; fi"; then
                   echo "✅ Test passed: $tex_file"
           
                   # Move PDF to results directory
@@ -181,7 +174,7 @@ jobs:
             echo "## 🧪 Tests Completed (${{ matrix.variant }})" >> $GITHUB_STEP_SUMMARY
             echo "**Variant:** ${{ matrix.variant }}" >> $GITHUB_STEP_SUMMARY
             echo "**Test Suites:** ${{ join(matrix.test_suites, ', ') }}" >> $GITHUB_STEP_SUMMARY
-            echo "**Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pull-image.outputs.final_tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
             echo "**Status:** ✅ All tests passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "## ❌ Tests Failed (${{ matrix.variant }})" >> $GITHUB_STEP_SUMMARY
