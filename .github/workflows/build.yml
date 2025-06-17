@@ -173,7 +173,9 @@ jobs:
             type=ref,event=pr${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
             type=sha,prefix={{branch}}-${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
             # Scheduled builds
-            type=schedule,pattern={{date 'YYYYMMDD'}}${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}            org.opencontainers.image.title=LaTeX Compiler (${{ matrix.variant }})
+            type=schedule,pattern={{date 'YYYYMMDD'}}${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
+          labels: |
+            org.opencontainers.image.title=LaTeX Compiler (${{ matrix.variant }})
             org.opencontainers.image.description=${{ matrix.description }}
             org.opencontainers.image.vendor=Mattia Bertorello
             org.opencontainers.image.version=${{ needs.build-base.outputs.texlive_version }}
@@ -181,7 +183,6 @@ jobs:
             latex.variant=${{ matrix.variant }}
             latex.texlive.version=${{ needs.build-base.outputs.texlive_version }}
             latex.build.date=${{ inputs.build_date }}
-
       - name: Build and push variant image
         if: steps.check.outputs.skip != 'true'
         id: build
