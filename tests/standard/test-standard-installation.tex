@@ -28,6 +28,11 @@
     urlcolor=cyan,
 }
 
+% Improve spacing around floats
+\setlength{\intextsep}{12pt}
+\setlength{\textfloatsep}{12pt}
+\setlength{\floatsep}{12pt}
+
 \title{\textcolor{blue}{Testing Standard \LaTeX{} Installation}}
 \author{Automated Test}
 \date{\today}
@@ -69,30 +74,51 @@
         \end{pmatrix}
     \end{equation}
 
+    \clearpage % Force a new page to avoid float issues
     \section{Tables}
-    \begin{table}[h]
+
+    Below is a simple table demonstrating the booktabs package:
+
+    \begin{table}[!ht]
         \centering
         \caption{A simple table with booktabs}
         \begin{tabular}{lcc}
             \toprule
-            Item & Quantity & Price (\$) \\
+            \textbf{Item} & \textbf{Quantity} & \textbf{Price (\$)} \\
             \midrule
             Apples & 5 & 2.50 \\
             Oranges & 3 & 3.75 \\
             Bananas & 6 & 1.20 \\
             \bottomrule
         \end{tabular}
+        \label{tab:simple}
     \end{table}
 
     \section{Figures}
-    \begin{figure}[h]
+
+    Below is a test figure:
+
+    \begin{figure}[!ht]
         \centering
-        % This will fail if no image is available, but that's expected
-        % You can create a simple image with the commands in the test script
-        \includegraphics[width=0.5\textwidth]{test-image.png}
-        \caption{Test image (this will show an error if no image is available)}
+        % Try to include the image, but provide a fallback
+        \IfFileExists{test-image.png}{
+            \includegraphics[width=0.5\textwidth]{test-image.png}
+        }{
+        % Create a box with text if image is missing
+            \framebox[0.5\textwidth]{
+                \parbox{0.45\textwidth}{
+                    \centering
+                    \vspace{1cm}
+                    Image not found (test-image.png)
+                    \vspace{1cm}
+                }
+            }
+        }
+        \caption{Test image}
+        \label{fig:test}
     \end{figure}
 
+    \clearpage % Start a new page for the remaining content
     \section{Code Listing}
     \begin{lstlisting}[language=Python, caption=Sample Python code]
 def hello_world():

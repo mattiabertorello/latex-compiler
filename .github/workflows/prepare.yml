@@ -50,7 +50,7 @@ jobs:
                 "texlive_profile": "texlive-profile-minimal.txt",
                 "tags_suffix": "",
                 "description": "Minimal LaTeX compiler with essential packages",
-                "test_suites": ["basic", "minimal"]
+                "test_suites": ["basic", "minimal", "standard"]
               }
             ]
           }

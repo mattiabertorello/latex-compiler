@@ -3,25 +3,15 @@ ARG BASE_IMAGE=temp-latex-base:latest
 FROM ${BASE_IMAGE} AS builder
 
 # Accept build arguments for customization
-ARG APT_PACKAGES=apt-packages-minimal.txt
 ARG TEXLIVE_PROFILE=texlive-profile-minimal.txt
-ARG PACKAGE_LIST=texlive-packages-minimal.txt
 ARG TARGETARCH
 
 WORKDIR /build
 
 # Copy configuration files
-COPY ${APT_PACKAGES} /tmp/apt-packages.txt
 COPY ${TEXLIVE_PROFILE} /tmp/texlive.profile
-COPY ${PACKAGE_LIST} /tmp/texlive-packages.txt
 
-# Install additional apt packages
-RUN apt-get update -q && \
-    apt-get install -qy $(grep -v '^#' /tmp/apt-packages.txt | grep -v '^$') && \
-    rm -rf /var/lib/apt/lists/* && \
-    rm /tmp/apt-packages.txt
-
-# Install TeX Live with profile
+# Install TeX Live with profile (base installation only)
 RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
     export LIVE_FOLDER=/usr/local/texlive/$LIVE_YEAR && \
     export LIVE_BIN=${LIVE_FOLDER}/bin/$PLATFORM && \
@@ -32,6 +22,18 @@ RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
     # Configure tlmgr
     ${LIVE_BIN}/tlmgr option docfiles 0 && \
     ${LIVE_BIN}/tlmgr update --self && \
+    # Clean up installation files
+    rm -rf /tmp/texlive.profile && \
+    rm -rf /install-tl-unx
+
+# Accept build arguments for customization
+ARG PACKAGE_LIST=texlive-packages-minimal.txt
+
+# Copy package list in a separate layer
+COPY ${PACKAGE_LIST} /tmp/texlive-packages.txt
+
+# Install additional TeX Live packages
+RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
     # Install packages
     grep -v '^#' /tmp/texlive-packages.txt | grep -v '^$' | xargs ${LIVE_BIN}/tlmgr -v install || \
     { echo "==== TLMGR INSTALLATION FAILED ===="; \
@@ -44,13 +46,15 @@ RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
     # Clean up
     rm -rf ${LIVE_FOLDER}/tlpkg/backups/*.tar.xz && \
     rm -rf ${LIVE_FOLDER}/texmf-var/web2c/tlmgr.log ${LIVE_FOLDER}/texmf-var/web2c/tlmgr-commands.log && \
-    rm -rf /tmp/texlive-packages.txt /tmp/texlive.profile && \
-    rm -rf /install-tl-unx
+    rm -rf /tmp/texlive-packages.txt
 
 # Final image with minimal layers
 FROM ubuntu:latest
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /data
+
+# Accept build arguments for customization
+ARG APT_PACKAGES=apt-packages-minimal.txt
 
 # Copy apt packages list for documentation
 ARG APT_PACKAGES=apt-packages-minimal.txt

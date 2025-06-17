@@ -4,3 +4,7 @@ hyperref
 geometry
 xcolor
 titlesec
+booktabs
+caption
+listings
+parskip
