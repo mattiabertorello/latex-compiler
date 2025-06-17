@@ -155,68 +155,68 @@ jobs:
 
       - name: Clean up old Docker images
         run: |
-           # Get repository name in lowercase for GHCR
-            REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-            OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-            
-            echo "Fetching all package versions..."
+          # Get repository name in lowercase for GHCR
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           
+          echo "Fetching all package versions..."
+
           # First, let's check the actual response format
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions?per_page=100")
-          
+
           # Check if the response is valid JSON and contains data
-            if ! echo "$RESPONSE" | jq -e . > /dev/null 2>&1; then
-          echo "Error: Invalid JSON response from GitHub API"
-          echo "Response: $RESPONSE"
+          if ! echo "$RESPONSE" | jq -e . > /dev/null 2>&1; then
+            echo "Error: Invalid JSON response from GitHub API"
+            echo "Response: $RESPONSE"
             exit 1
-            fi
-            
-            # Check if we got an array of package versions
-            if [ "$(echo "$RESPONSE" | jq 'if type == "array" then true else false end')" != "true" ]; then
-          echo "Error: Unexpected response format from GitHub API"
-          echo "Response: $RESPONSE"
-            exit 1
-            fi
+          fi
           
+          # Check if we got an array of package versions
+          if [ "$(echo "$RESPONSE" | jq 'if type == "array" then true else false end')" != "true" ]; then
+            echo "Error: Unexpected response format from GitHub API"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
+
           # Process the response with proper error handling
           PACKAGE_VERSIONS=$(echo "$RESPONSE" | jq -r '.[] | {id: .id, created_at: .created_at, digest: .name, tags: (.metadata.container.tags // [])}')
-          
+
           # Sort versions by creation date (newest first)
-            SORTED_VERSIONS=$(echo "$PACKAGE_VERSIONS" | jq -s 'sort_by(.created_at) | reverse')
-            
-            # Keep the latest N non-base images and delete the rest
-            echo "Identifying images to keep and delete..."
-            
-            # Keep all images that don't have "-base" in their tags
-            KEEP_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base") | not) | all) | .id' | head -n $KEEP_LAST_N)
-            
-            # Also keep the latest base image
-            LATEST_BASE_ID=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base")) | any) | .id' | head -n 1)
-            
-            # Combine IDs to keep
-            ALL_KEEP_IDS="$KEEP_IDS $LATEST_BASE_ID"
-            
-            # Get all IDs
-            ALL_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[].id')
-            
-            # Find IDs to delete (those not in the keep list)
-            DELETE_IDS=$(comm -23 <(echo "$ALL_IDS" | sort) <(echo "$ALL_KEEP_IDS" | tr ' ' '\n' | sort))
-            
-            # Count versions to delete
-            DELETE_COUNT=$(echo "$DELETE_IDS" | wc -l)
-            echo "Deleting $DELETE_COUNT older versions"
-            
-            # Delete older versions
-            for ID in $DELETE_IDS; do
-          echo "Deleting package version ID: $ID"
-            curl -X DELETE \
-          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions/$ID"
+          SORTED_VERSIONS=$(echo "$PACKAGE_VERSIONS" | jq -s 'sort_by(.created_at) | reverse')
           
-          # Add a small delay to avoid rate limiting
+          # Keep the latest N non-base images and delete the rest
+          echo "Identifying images to keep and delete..."
+          
+          # Keep all images that don't have "-base" in their tags
+          KEEP_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base") | not) | all) | .id' | head -n $KEEP_LAST_N)
+          
+          # Also keep the latest base image
+          LATEST_BASE_ID=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base")) | any) | .id' | head -n 1)
+          
+          # Combine IDs to keep
+          ALL_KEEP_IDS="$KEEP_IDS $LATEST_BASE_ID"
+          
+          # Get all IDs
+          ALL_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[].id')
+          
+          # Find IDs to delete (those not in the keep list)
+          DELETE_IDS=$(comm -23 <(echo "$ALL_IDS" | sort) <(echo "$ALL_KEEP_IDS" | tr ' ' '\n' | sort))
+          
+          # Count versions to delete
+          DELETE_COUNT=$(echo "$DELETE_IDS" | wc -l)
+          echo "Deleting $DELETE_COUNT older versions"
+          
+          # Delete older versions
+          for ID in $DELETE_IDS; do
+            echo "Deleting package version ID: $ID"
+            curl -X DELETE \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions/$ID"
+
+            # Add a small delay to avoid rate limiting
             sleep 1
-            done
-            
-            echo "Cleanup complete. Kept the latest $KEEP_LAST_N versions and the latest base image."
+          done
+          
+          echo "Cleanup complete. Kept the latest $KEEP_LAST_N versions and the latest base image."
