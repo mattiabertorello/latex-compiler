@@ -28,6 +28,9 @@ listings
 # Adjusts paragraph spacing (removes indentation, adds vertical space)
 parskip
 
+# Controls hyphenation behavior and provides options to disable hyphenation
+hyphenat
+
 # Additional useful packages
 
 # Enhanced math formatting and environments

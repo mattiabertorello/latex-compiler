@@ -2,58 +2,136 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 
-\title{Basic LaTeX Test}
+% Packages from texlive-packages-minimal.txt
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{parskip}
+\usepackage{hyphenat}
+\usepackage{amsmath}
+\usepackage{graphics}
+\usepackage{microtype}
+\usepackage[english]{babel}
+\usepackage{csquotes}
+\usepackage{fancyhdr}
+\usepackage{pgfplots}
+\usepackage{siunitx}
+
+% Setup fancy headers
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Package Test}
+\lhead{LaTeX Docker}
+\cfoot{\thepage}
+
+% Custom section formatting with titlesec
+\titleformat{\section}
+{\normalfont\Large\bfseries\color{blue}}{\thesection}{1em}{}
+
+\title{\color{red}Extended LaTeX Package Test}
 \author{Docker Test Suite}
 \date{\today}
 
 \begin{document}
 
-\maketitle
+    \maketitle
 
-\section{Introduction}
-This is a basic test document to verify that the LaTeX compiler can handle fundamental LaTeX features.
+    \section{Introduction}
+    This is a comprehensive test document to verify that the LaTeX compiler can handle various packages and features.
 
-\section{Text Formatting}
-This paragraph tests \textbf{bold text}, \textit{italic text}, \underline{underlined text}, and \texttt{monospace text}.
+    \section{Text Formatting}
+    This paragraph tests \textbf{bold text}, \textit{italic text}, \underline{underlined text}, and \texttt{monospace text}.
 
-\subsection{Lists}
-Unordered list:
-\begin{itemize}
-    \item First item
-    \item Second item
-    \item Third item
-\end{itemize}
+    \subsection{Lists with enumitem}
+    Customized unordered list:
+    \begin{itemize}[label=\color{blue}$\bullet$, leftmargin=*]
+        \item First item
+        \item Second item
+        \item Third item
+    \end{itemize}
 
-Ordered list:
-\begin{enumerate}
-    \item First numbered item
-    \item Second numbered item
-    \item Third numbered item
-\end{enumerate}
+    Customized ordered list:
+    \begin{enumerate}[label=\color{red}\Roman*., start=5]
+        \item Fifth numbered item
+        \item Sixth numbered item
+        \item Seventh numbered item
+    \end{enumerate}
 
-\section{Mathematics}
-Inline math: $E = mc^2$ and $\pi \approx 3.14159$.
+    \section{Hyphenation Control with hyphenat}
+    \subsection{Normal Hyphenation}
+    This is a demonstration of normal hyphenation in LaTeX. Supercalifragilisticexpialidocious is a very long word that would normally be hyphenated.
 
-Display math:
-\[
-\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
-\]
+    \subsection{Disabled Hyphenation}
+    \begin{hyphenrules}{nohyphenation}
+        This paragraph has hyphenation disabled. Supercalifragilisticexpialidocious will not be hyphenated regardless of its length or position.
+    \end{hyphenrules}
 
-\section{Tables}
-\begin{table}[h]
-\centering
-\begin{tabular}{|c|c|c|}
-\hline
-Column 1 & Column 2 & Column 3 \\
-\hline
-Data 1 & Data 2 & Data 3 \\
-Data 4 & Data 5 & Data 6 \\
-\hline
-\end{tabular}
-\caption{Basic table test}
-\end{table}
+    \subsection{Custom Hyphenation}
+    \hyphenation{Su-per-cal-i-frag-il-is-tic-ex-pi-al-i-do-cious}
+    Now with custom hyphenation points defined: Supercalifragilisticexpialidocious.
 
-\section{Conclusion}
-This document successfully tests basic LaTeX functionality including text formatting, lists, mathematics, and tables.
+    \section{Mathematics with amsmath}
+    Inline math: $E = mc^2$ and $\pi \approx 3.14159$.
+
+    Display math with equation numbering:
+    \begin{equation}
+        \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+    \end{equation}
+
+    Aligned equations:
+    \begin{align}
+        a &= b + c \\
+        d &= e + f + g
+    \end{align}
+
+    \section{Tables with booktabs}
+    \begin{table}[h]
+        \centering
+        \caption{Professional table with booktabs}
+        \begin{tabular}{lcr}
+            \toprule
+            \textbf{Column 1} & \textbf{Column 2} & \textbf{Column 3} \\
+            \midrule
+            Data 1 & Data 2 & Data 3 \\
+            Data 4 & Data 5 & Data 6 \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \section{Code Listing}
+    \lstset{
+        basicstyle=\ttfamily\small,
+        keywordstyle=\color{blue},
+        commentstyle=\color{green!60!black},
+        frame=single,
+        numbers=left
+    }
+
+    \begin{lstlisting}[language=Python, caption=Sample Python Code]
+# This is a comment
+def hello_world():
+    print("Hello, World!")
+    return True
+    \end{lstlisting}
+
+    \section{Units with siunitx}
+    The speed of light is \SI{299792458}{\meter\per\second}.
+    The sample weighs \SI{5.4}{\kilo\gram}.
+
+    \section{Quotes with csquotes}
+    Regular quotes: ``quoted text''
+
+    Enquote command: \enquote{quoted text}
+
+    \section{Hyperlinks with hyperref}
+    Click \href{https://www.latex-project.org/}{here} to visit the LaTeX project website.
+
+    \section{Conclusion}
+    This document successfully tests multiple LaTeX packages including text formatting, lists, mathematics, tables, and especially hyphenation control with the \texttt{hyphenat} package.
 
 \end{document}
