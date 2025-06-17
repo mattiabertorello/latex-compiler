@@ -57,10 +57,10 @@ jobs:
       - name: Get TeX Live version
         id: texlive-version
         run: |
-            # Get version from the base image
-           docker pull ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
-           TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && echo $LIVE_YEAR')
-           echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
+          # Get version from the base image
+          docker pull ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
+          TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && echo $LIVE_YEAR')
+          echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create release notes
         run: |
