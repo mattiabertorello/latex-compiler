@@ -1,5 +1,6 @@
-# Use the base image
-FROM temp-latex-base:latest AS builder
+# Use the base image from build argument
+ARG BASE_IMAGE=temp-latex-base:latest
+FROM ${BASE_IMAGE} AS builder
 
 # Accept build arguments for customization
 ARG APT_PACKAGES=apt-packages-minimal.txt

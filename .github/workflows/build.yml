@@ -237,23 +237,23 @@ jobs:
           echo "" >> manifests/packages-${{ matrix.variant }}.md
           
           echo "## System Packages (APT)" >> manifests/packages-${{ matrix.variant }}.md
-          echo '' >> manifests/packages-${{ matrix.variant }}.md
-          cat ${{ matrix.apt_packages }} | grep -v '^#' | grep -v '^ >> manifests/packages-${{ matrix.variant }}.md
-          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          echo '```' >> manifests/packages-${{ matrix.variant }}.md
+          cat ${{ matrix.apt_packages }} | grep -v '^#' | grep -v '^$' >> manifests/packages-${{ matrix.variant }}.md
+          echo '```' >> manifests/packages-${{ matrix.variant }}.md
           echo "" >> manifests/packages-${{ matrix.variant }}.md
           
           echo "## LaTeX Packages (TeX Live)" >> manifests/packages-${{ matrix.variant }}.md
-          echo '' >> manifests/packages-${{ matrix.variant }}.md
-          cat ${{ matrix.texlive_packages }} | grep -v '^#' | grep -v '^ >> manifests/packages-${{ matrix.variant }}.md
-          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          echo '```' >> manifests/packages-${{ matrix.variant }}.md
+          cat ${{ matrix.texlive_packages }} | grep -v '^#' | grep -v '^$' >> manifests/packages-${{ matrix.variant }}.md
+          echo '```' >> manifests/packages-${{ matrix.variant }}.md
           echo "" >> manifests/packages-${{ matrix.variant }}.md
           
           # Get detailed package info from the image - use the already built temp image
           echo "## Installed TeX Live Collections" >> manifests/packages-${{ matrix.variant }}.md
-          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          echo '```' >> manifests/packages-${{ matrix.variant }}.md
           docker run --rm temp-latex-${{ matrix.variant }}:latest \
             bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && tlmgr list --only-installed | grep "collection-"' >> manifests/packages-${{ matrix.variant }}.md || true
-          echo '' >> manifests/packages-${{ matrix.variant }}.md
+          echo '```' >> manifests/packages-${{ matrix.variant }}.md
 
       - name: Upload manifest artifact
         if: steps.check.outputs.skip != 'true'
