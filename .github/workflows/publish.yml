@@ -18,7 +18,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/latex-compiler
+  IMAGE_NAME: ${{ github.repository }}
+  BASE_IMAGE_NAME: ${{ github.repository }}/base
   KEEP_LAST_N: 10
 
 jobs:
@@ -49,8 +50,8 @@ jobs:
         id: texlive-version
         run: |
           # Get version from the base image
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }}
-          TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && echo $LIVE_YEAR')
+          docker pull ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
+          TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && echo $LIVE_YEAR')
           echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create release notes
@@ -155,7 +156,7 @@ jobs:
       - name: Clean up old Docker images
         run: |
           # Get repository name in lowercase for GHCR
-          REPO_NAME=$(echo "${{ github.repository }}/latex-compiler" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           
           echo "Fetching all package versions..."
@@ -191,3 +192,15 @@ jobs:
           echo "Deleting $DELETE_COUNT older versions"
           
           # Delete older versions
+          for ID in $DELETE_IDS; do
+            echo "Deleting package version ID: $ID"
+            curl -X DELETE \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions/$ID"
+          
+            # Add a small delay to avoid rate limiting
+            sleep 1
+          done
+          
+          echo "Cleanup complete. Kept the latest $KEEP_LAST_N versions and the latest base image."

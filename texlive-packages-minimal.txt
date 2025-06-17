@@ -1,10 +1,58 @@
 # Minimal LaTeX packages
+# Each package is followed by a description of its functionality
+
+# Advanced control over lists (enumerate, itemize, description)
 enumitem
+
+# Creates hyperlinks in documents and generates PDF bookmarks
 hyperref
+
+# Simplifies page layout management (margins, paper size)
 geometry
+
+# Provides color support and customization
 xcolor
+
+# Allows customization of section titles and headings
 titlesec
+
+# Creates professional-looking tables with proper spacing
 booktabs
+
+# Customizes captions for figures and tables
 caption
+
+# Formats source code with syntax highlighting
 listings
+
+# Adjusts paragraph spacing (removes indentation, adds vertical space)
 parskip
+
+# Additional useful packages
+
+# Enhanced math formatting and environments
+amsmath
+
+# Handles inclusion of graphics/images
+graphicx
+
+# Improves typography with micro-adjustments
+microtype
+
+# Font selection for XeLaTeX and LuaLaTeX
+fontspec
+
+# Multilingual support
+babel
+
+# Context-sensitive quotation marks
+csquotes
+
+# Customizable headers and footers
+fancyhdr
+
+# Creates high-quality plots and charts
+pgfplots
+
+# Consistent formatting of numbers and units
+siunitx

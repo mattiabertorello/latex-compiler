@@ -18,7 +18,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/latex-compiler
+  IMAGE_NAME: ${{ github.repository }}
+  BASE_IMAGE_NAME: ${{ github.repository }}/base
 
 jobs:
   build-base:
@@ -49,7 +50,7 @@ jobs:
         id: check-base
         run: |
           if [[ "${{ github.event_name }}" == "push" && "${{ github.event.inputs.force_rebuild }}" != "true" ]]; then
-            if docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }} >/dev/null 2>&1; then
+            if docker manifest inspect ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }} >/dev/null 2>&1; then
               echo "Base image already exists"
               echo "skip=true" >> $GITHUB_OUTPUT
             else
@@ -70,7 +71,7 @@ jobs:
           file: ./base.Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }}
+          tags: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
           cache-from: type=gha,scope=base
           cache-to: type=gha,mode=max,scope=base
           labels: |
@@ -108,7 +109,7 @@ jobs:
           else
             echo "## 🐳 Base Docker Image Built and Pushed" >> $GITHUB_STEP_SUMMARY
             echo "**Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
-            echo "**Image:** ${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Image:** ${{ env.BASE_IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
             echo "**Tag:** ${{ inputs.base_image_tag }}" >> $GITHUB_STEP_SUMMARY
             echo "**TeX Live Version:** ${{ steps.get-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           fi
@@ -200,7 +201,7 @@ jobs:
             PACKAGE_LIST=${{ matrix.texlive_packages }}
             APT_PACKAGES=${{ matrix.apt_packages }}
             TEXLIVE_PROFILE=${{ matrix.texlive_profile }}
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }}
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
 
       - name: Generate artifact attestation
         if: false # Temporarily disabled - attestations require public repository
@@ -226,7 +227,7 @@ jobs:
             PACKAGE_LIST=${{ matrix.texlive_packages }}
             APT_PACKAGES=${{ matrix.apt_packages }}
             TEXLIVE_PROFILE=${{ matrix.texlive_profile }}
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.base_image_tag }}
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
 
       - name: Generate package manifest
         if: steps.check.outputs.skip != 'true'

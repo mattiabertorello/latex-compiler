@@ -1,19 +1,56 @@
 # Standard LaTeX packages
+# Each package is followed by a description of its functionality
+
+# Advanced control over lists (enumerate, itemize, description)
 enumitem
+
+# Creates hyperlinks in documents and generates PDF bookmarks
 hyperref
+
+# Simplifies page layout management (margins, paper size)
 geometry
+
+# Provides color support and customization
 xcolor
+
+# Allows customization of section titles and headings
 titlesec
+
+# Improved handling of URLs (line breaks in URLs)
 url
+
+# Basic graphics inclusion capabilities
 graphics
+
+# Collection of essential LaTeX tools and utilities
 tools
+
+# Enhanced math formatting and environments
 amsmath
+
+# AMS document classes (e.g., amsart, amsbook)
 amscls
+
+# Multilingual support for documents
 babel
+
+# Adjusts paragraph spacing (removes indentation, adds vertical space)
 parskip
+
+# Formats source code with syntax highlighting
 listings
+
+# Font selection for XeLaTeX and LuaLaTeX
 fontspec
+
+# Creates professional-looking tables with proper spacing
 booktabs
+
+# Enhanced version of graphics package for images
 graphicx
+
+# Customizes captions for figures and tables
 caption
+
+# Customizable headers and footers
 fancyhdr

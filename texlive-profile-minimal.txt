@@ -1,7 +1,20 @@
+# Selected scheme: basic installation with minimal packages
 selected_scheme scheme-basic
+
+# Path to user's personal TeX directory
 TEXMFHOME ~/.texmf
+
+# Enable collection of basic packages
 collection-basic 1
+
+# Enable collection of recommended fonts
 collection-fontsrecommended 1
+
+# Enable collection of LaTeX packages
 collection-latex 1
+
+# Disable installation of documentation
 option_doc 0
+
+# Disable installation of source files
 option_src 0

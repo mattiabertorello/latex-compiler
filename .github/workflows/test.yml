@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/latex-compiler
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   test-images:
@@ -65,31 +65,6 @@ jobs:
             echo "image_available=false" >> $GITHUB_OUTPUT
             exit 1
           fi
-
-      - name: Debug container filesystem and PATH
-        if: steps.pull-image.outputs.image_available == 'true'
-        run: |
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}"
-          echo "🔍 Debugging container filesystem and PATH"
-          
-          # Check PATH environment variable
-          echo "Container PATH:"
-          docker run --rm "${IMAGE_TAG}" env | grep PATH
-          
-          # Check if compile.sh exists in expected locations
-          echo "Checking for compile.sh in /usr/local/bin:"
-          docker run --rm "${IMAGE_TAG}" ls -la /usr/local/bin/
-          
-          echo "Checking for compile.sh in root directory:"
-          docker run --rm "${IMAGE_TAG}" ls -la /
-          
-          # Try to find compile.sh anywhere in the container
-          echo "Searching for compile.sh in the container:"
-          docker run --rm "${IMAGE_TAG}" find / -name "compile.sh" 2>/dev/null || echo "No compile.sh found"
-          
-          # Check if the script is executable
-          echo "Checking if compile.sh is executable (if found):"
-          docker run --rm "${IMAGE_TAG}" bash -c "find / -name 'compile.sh' -exec ls -la {} \; 2>/dev/null" || echo "No compile.sh found"
 
       - name: Verify image layers and cache efficiency
         if: steps.pull-image.outputs.image_available == 'true'

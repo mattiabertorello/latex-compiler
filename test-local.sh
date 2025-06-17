@@ -20,7 +20,8 @@ BUILD_LOGS_DIR="build-logs"
 
 # Test suites configuration
 declare -A VARIANTS=(
-    ["minimal"]="texlive-packages-minimal.txt:apt-packages-minimal.txt:basic,minimal"
+    ["minimal"]="texlive-packages-minimal.txt:apt-packages-minimal.txt:basic,minimal,standard"
+    ["standard"]="texlive-packages-standard.txt:apt-packages-standard.txt:basic,standard"
     ["full"]="texlive-packages-full.txt:apt-packages-full.txt:basic,minimal,full,advanced"
 )
 

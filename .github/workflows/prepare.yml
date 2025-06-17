@@ -36,6 +36,25 @@ jobs:
         id: base-image-tag
         run: echo "tag=${{ github.ref_name }}-${{ github.sha }}-base" >> $GITHUB_OUTPUT
 
+        # Disable temporary the standard and full variants
+        #               {
+        #                "variant": "standard",
+        #                "texlive_packages": "texlive-packages-standard.txt",
+        #                "apt_packages": "apt-packages-standard.txt",
+        #                "texlive_profile": "texlive-profile-standard.txt",
+        #                "tags_suffix": "-standard",
+        #                "description": "Standard LaTeX compiler with common packages for everyday use",
+        #                "test_suites": ["basic", "minimal", "standard"]
+        #              },
+        #              {
+        #                "variant": "full",
+        #                "texlive_packages": "texlive-packages-full.txt",
+        #                "apt_packages": "apt-packages-full.txt",
+        #                "texlive_profile": "texlive-profile-full.txt",
+        #                "tags_suffix": "-full",
+        #                "description": "Full LaTeX compiler with comprehensive package set",
+        #                "test_suites": ["basic", "minimal", "standard", "full", "advanced"]
+        #              }
       - name: Set up build matrix
         id: set-matrix
         run: |
