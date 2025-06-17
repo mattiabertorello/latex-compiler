@@ -6,7 +6,7 @@ on:
       min_versions_to_keep:
         description: 'Minimum versions to keep for main package'
         required: false
-        default: '10'
+        default: '15'
         type: string
       min_base_versions_to_keep:
         description: 'Minimum versions to keep for base package'
@@ -18,12 +18,17 @@ on:
         required: false
         default: false
         type: boolean
+      exclude_tags:
+        description: 'Comma-separated list of tags to never delete (e.g., latest,stable)'
+        required: false
+        default: 'latest,main'
+        type: string
   workflow_dispatch:
     inputs:
       min_versions_to_keep:
         description: 'Minimum versions to keep for main package'
         required: false
-        default: '10'
+        default: '15'
         type: string
       min_base_versions_to_keep:
         description: 'Minimum versions to keep for base package'
@@ -35,6 +40,11 @@ on:
         required: false
         default: false
         type: boolean
+      exclude_tags:
+        description: 'Comma-separated list of tags to never delete'
+        required: false
+        default: 'latest,main'
+        type: string
 
 permissions:
   contents: read
@@ -52,17 +62,33 @@ jobs:
       - name: Set cleanup parameters
         id: params
         run: |
+          # Set base parameters
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "min_versions=${{ inputs.min_versions_to_keep }}" >> $GITHUB_OUTPUT
-            echo "min_base_versions=${{ inputs.min_base_versions_to_keep }}" >> $GITHUB_OUTPUT
+            min_versions="${{ inputs.min_versions_to_keep }}"
+            min_base_versions="${{ inputs.min_base_versions_to_keep }}"
+            exclude_tags="${{ inputs.exclude_tags }}"
+          
             if [ "${{ inputs.force_cleanup }}" = "true" ]; then
-              echo "min_versions=3" >> $GITHUB_OUTPUT
-              echo "min_base_versions=3" >> $GITHUB_OUTPUT
+              min_versions=5
+              min_base_versions=3
             fi
           else
-            echo "min_versions=10" >> $GITHUB_OUTPUT
-            echo "min_base_versions=10" >> $GITHUB_OUTPUT
+            min_versions=15
+            min_base_versions=10
+            exclude_tags="latest,main"
           fi
+          
+          echo "min_versions=${min_versions}" >> $GITHUB_OUTPUT
+          echo "min_base_versions=${min_base_versions}" >> $GITHUB_OUTPUT
+          echo "exclude_tags=${exclude_tags}" >> $GITHUB_OUTPUT
+          
+          # Add safety delay to avoid race conditions
+          echo "cleanup_delay=30" >> $GITHUB_OUTPUT
+
+      - name: Wait before cleanup (avoid race conditions)
+        run: |
+          echo "Waiting ${{ steps.params.outputs.cleanup_delay }} seconds to avoid race conditions..."
+          sleep ${{ steps.params.outputs.cleanup_delay }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -71,56 +97,76 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Delete all untagged package versions
+      # Clean untagged versions but keep recent ones (they might be part of ongoing builds)
+      - name: Delete old untagged package versions (keep recent 5)
         uses: actions/delete-package-versions@v5
         with:
           package-name: 'latex-compiler'
           package-type: 'container'
-          min-versions-to-keep: 0
+          min-versions-to-keep: 5
           delete-only-untagged-versions: true
           token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
-      - name: Delete old tagged package versions (keep only 10 most recent)
+      # More conservative tagged version cleanup
+      - name: Delete old tagged package versions
         uses: actions/delete-package-versions@v5
         with:
           package-name: 'latex-compiler'
           package-type: 'container'
           min-versions-to-keep: ${{ steps.params.outputs.min_versions }}
           delete-only-untagged-versions: false
+          ignore-versions: ${{ steps.params.outputs.exclude_tags }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Delete all untagged package versions (base image)
+      # Base image cleanup with more conservative approach
+      - name: Delete old untagged package versions (base image, keep recent 5)
         uses: actions/delete-package-versions@v5
         with:
           package-name: 'latex-compiler/base'
           package-type: 'container'
-          min-versions-to-keep: 0
+          min-versions-to-keep: 5
           delete-only-untagged-versions: true
           token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
-      - name: Delete old tagged package versions (base image, keep only 10 most recent)
+      - name: Delete old tagged package versions (base image)
         uses: actions/delete-package-versions@v5
         with:
           package-name: 'latex-compiler/base'
           package-type: 'container'
           min-versions-to-keep: ${{ steps.params.outputs.min_base_versions }}
           delete-only-untagged-versions: false
+          ignore-versions: ${{ steps.params.outputs.exclude_tags }}
           token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
-      - name: Clean up Docker system
+      # Optional: Clean up very old untagged versions more aggressively
+      - name: Aggressive cleanup of very old untagged versions
+        if: ${{ inputs.force_cleanup == true }}
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'latex-compiler'
+          package-type: 'container'
+          min-versions-to-keep: 1
+          delete-only-untagged-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Clean up Docker system (conservative)
         run: |
-          docker system prune -af --volumes
+          # Only clean up unused resources, not everything
+          docker system prune -f
         continue-on-error: true
 
       - name: Report cleanup completion
         run: |
           echo "✅ Cleanup completed successfully"
-          echo "- Deleted ALL untagged versions"
+          echo "- Kept recent untagged versions to avoid race conditions"
           echo "- Kept ${{ steps.params.outputs.min_versions }} most recent tagged versions (main package)"
           echo "- Kept ${{ steps.params.outputs.min_base_versions }} most recent tagged versions (base package)"
-          echo "- Cleaned up Docker system resources"
+          echo "- Protected tags: ${{ steps.params.outputs.exclude_tags }}"
+          echo "- Applied ${{ steps.params.outputs.cleanup_delay }}s delay to avoid race conditions"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "- Triggered manually with custom parameters"
           else

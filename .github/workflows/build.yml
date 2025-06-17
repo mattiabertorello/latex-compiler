@@ -78,6 +78,7 @@ jobs:
             org.opencontainers.image.title=LaTeX Compiler Base
             org.opencontainers.image.description=Base image for LaTeX compiler variants
             org.opencontainers.image.vendor=Mattia Bertorello
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
             org.opencontainers.image.build.date=${{ inputs.build_date }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
 

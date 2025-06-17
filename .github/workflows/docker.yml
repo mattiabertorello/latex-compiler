@@ -78,10 +78,10 @@ jobs:
       contents: write
       packages: write
 
-#  cleanup:
-#    needs: [ prepare, build, test, publish ]
-#    uses: ./.github/workflows/cleanup.yml
-#    secrets: inherit
-#    permissions:
-#      contents: read
-#      packages: write
+  cleanup:
+    needs: [ prepare, build, test, publish ]
+    uses: ./.github/workflows/cleanup.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
