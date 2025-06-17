@@ -26,6 +26,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write # This is required for requesting the JWT
     outputs:
       texlive_version: ${{ steps.get-version.outputs.version }}
 
@@ -117,7 +118,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
+      id-token: write # This is required for requesting the JWT
     strategy:
       matrix: ${{ fromJson(inputs.matrix) }}
       fail-fast: false
