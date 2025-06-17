@@ -95,7 +95,7 @@ jobs:
       - name: Delete old package versions (base image)
         uses: actions/delete-package-versions@v5
         with:
-          package-name: 'latex-compiler-base'
+          package-name: 'latex-compiler/base'
           package-type: 'container'
           min-versions-to-keep: ${{ steps.params.outputs.min_base_versions }}
           delete-only-untagged-versions: ${{ steps.params.outputs.delete_untagged_only }}
