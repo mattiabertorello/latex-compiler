@@ -46,12 +46,33 @@ jobs:
           pattern: test-results-*
           path: test-results/
 
+      # Move the login step before trying to pull the image
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Get TeX Live version
         id: texlive-version
         run: |
           # Get version from the base image
-          docker pull ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
-          TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }} bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && echo $LIVE_YEAR')
+          # Convert the full tag to short SHA format if needed
+          BASE_TAG="${{ inputs.base_image_tag }}"
+          if [[ "$BASE_TAG" == *"-"* ]]; then
+            # Extract the SHA part from the tag
+            SHA_PART=$(echo "$BASE_TAG" | cut -d'-' -f2)
+            # If it's a long SHA, convert to short format
+            if [[ ${#SHA_PART} -gt 7 ]]; then
+              SHORT_SHA=${SHA_PART:0:7}
+              BASE_TAG=$(echo "$BASE_TAG" | sed "s/$SHA_PART/$SHORT_SHA/")
+            fi
+          fi
+          
+          echo "Using base image tag: $BASE_TAG"
+          docker pull ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:$BASE_TAG
+          TEXLIVE_VERSION=$(docker run --rm ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:$BASE_TAG bash -c 'export $(grep -v "^#" /etc/environment | xargs -d "\n") && echo $LIVE_YEAR')
           echo "version=${TEXLIVE_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create release notes
@@ -145,13 +166,6 @@ jobs:
           echo "**Build Date:** ${{ inputs.build_date }}" >> $GITHUB_STEP_SUMMARY
           echo "**Variants:** minimal, standard, full" >> $GITHUB_STEP_SUMMARY
           echo "**Test Results:** All variants tested successfully" >> $GITHUB_STEP_SUMMARY
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up old Docker images
         run: |
