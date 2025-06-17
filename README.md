@@ -9,7 +9,6 @@ A Docker image for compiling LaTeX documents with TeX Live, designed to be light
 - **Configurable package sets** (minimal, standard, full)
 - **Built-in compilation helper script** with advanced features
 - **Automated builds** via GitHub Actions
-- **Non-root user** for security
 - **Volume support** for easy file access
 
 ## Quick Start

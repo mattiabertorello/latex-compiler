@@ -164,18 +164,16 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # For minimal variant (default)
-            type=raw,value=latest,enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
-            type=raw,value=${{ needs.build-base.outputs.texlive_version }},enable={{is_default_branch}},suffix=${{ matrix.tags_suffix }}
-            type=raw,value=${{ needs.build-base.outputs.texlive_version }}-${{ inputs.build_date }},suffix=${{ matrix.tags_suffix }}
+            # For minimal variant (default) - only add suffix if it's not empty
+            type=raw,value=latest,enable={{is_default_branch}}${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
+            type=raw,value=${{ needs.build-base.outputs.texlive_version }},enable={{is_default_branch}}${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
+            type=raw,value=${{ needs.build-base.outputs.texlive_version }}-${{ inputs.build_date }}${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
             # Branch and PR tags
-            type=ref,event=branch,suffix=${{ matrix.tags_suffix }}
-            type=ref,event=pr,suffix=${{ matrix.tags_suffix }}
-            type=sha,prefix={{branch}}-,suffix=${{ matrix.tags_suffix }}
+            type=ref,event=branch${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
+            type=ref,event=pr${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
+            type=sha,prefix={{branch}}-${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}
             # Scheduled builds
-            type=schedule,pattern={{date 'YYYYMMDD'}},suffix=${{ matrix.tags_suffix }}
-          labels: |
-            org.opencontainers.image.title=LaTeX Compiler (${{ matrix.variant }})
+            type=schedule,pattern={{date 'YYYYMMDD'}}${{ matrix.tags_suffix && format(',suffix={0}', matrix.tags_suffix) || '' }}            org.opencontainers.image.title=LaTeX Compiler (${{ matrix.variant }})
             org.opencontainers.image.description=${{ matrix.description }}
             org.opencontainers.image.vendor=Mattia Bertorello
             org.opencontainers.image.version=${{ needs.build-base.outputs.texlive_version }}
@@ -206,8 +204,7 @@ jobs:
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ inputs.base_image_tag }}
 
       - name: Generate artifact attestation
-        if: false # Temporarily disabled - attestations require public repository
-        # if: steps.check.outputs.skip != 'true'
+        if: steps.check.outputs.skip != 'true'
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
