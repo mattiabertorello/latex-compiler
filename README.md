@@ -17,7 +17,7 @@ A Docker image for compiling LaTeX documents with TeX Live, designed to be light
 ### Pull the Image
 
 ```bash
-docker pull ghcr.io/[your-username]/latex-compiler:latest
+docker pull ghcr.io/mattiabertorello/latex-compiler:latest
 ```
 
 ### Basic Usage
@@ -26,10 +26,10 @@ Compile a LaTeX document in your current directory:
 
 ```bash
 # Using the built-in helper script (recommended)
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh
 
 # Using pdflatex directly
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest pdflatex main.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest pdflatex main.tex
 ```
 
 ## Usage Examples
@@ -40,19 +40,19 @@ The image includes a `compile.sh` script with advanced features and error handli
 
 ```bash
 # Basic compilation (compiles main.tex by default)
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh
 
 # Specify input file and clean auxiliary files
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -i document.tex -c
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -i document.tex -c
 
 # Specify output directory
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -o output/
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -o output/
 
 # Compile with cleanup (removes .aux, .log, .out files)
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -c
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -c
 
 # Show help for the helper script
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -h
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -h
 ```
 
 **Helper Script Features:**
@@ -69,26 +69,26 @@ For more control or specific engines:
 
 ```bash
 # Basic PDF compilation
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest pdflatex main.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest pdflatex main.tex
 
 # XeLaTeX (for advanced font support)
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest xelatex main.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest xelatex main.tex
 
 # LuaLaTeX (for Lua scripting support)
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest lualatex main.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest lualatex main.tex
 
 # Multiple passes for references/bibliography
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest bash -c "pdflatex main.tex && pdflatex main.tex"
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest bash -c "pdflatex main.tex && pdflatex main.tex"
 ```
 
 ### Using latexmk
 
 ```bash
 # Automatic compilation with dependency tracking
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest latexmk -pdf main.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest latexmk -pdf main.tex
 
 # Clean auxiliary files after compilation
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest latexmk -pdf -c main.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest latexmk -pdf -c main.tex
 ```
 
 ### Interactive Mode
@@ -96,7 +96,7 @@ docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest la
 For debugging or multiple operations:
 
 ```bash
-docker run --rm -it -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest bash
+docker run --rm -it -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest bash
 ```
 
 ## Package Variants
@@ -184,9 +184,9 @@ docker-compose run --rm latex-watch
 Add to your `Makefile`:
 
 ```makefile
-DOCKER_IMAGE = ghcr.io/[your-username]/latex-compiler:latest
-DOCKER_IMAGE_STANDARD = ghcr.io/[your-username]/latex-compiler:latest-standard
-DOCKER_IMAGE_FULL = ghcr.io/[your-username]/latex-compiler:latest-full
+DOCKER_IMAGE = ghcr.io/mattiabertorello/latex-compiler:latest
+DOCKER_IMAGE_STANDARD = ghcr.io/mattiabertorello/latex-compiler:latest-standard
+DOCKER_IMAGE_FULL = ghcr.io/mattiabertorello/latex-compiler:latest-full
 
 .PHONY: pdf clean docker-pdf docker-pdf-standard docker-pdf-full docker-clean
 
@@ -237,7 +237,7 @@ jobs:
       - name: Compile LaTeX document
         run: |
           docker run --rm -v ${{ github.workspace }}:/data \
-            ghcr.io/[your-username]/latex-compiler:latest-standard \
+            ghcr.io/mattiabertorello/latex-compiler:latest-standard \
             compile.sh -i main.tex -c
 
       - name: Upload PDF
@@ -268,13 +268,13 @@ The built-in `compile.sh` script supports the following options:
 
 ```bash
 # Compile specific file with cleanup
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -i thesis.tex -c
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -i thesis.tex -c
 
 # Output to specific directory
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -o build/
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -o build/
 
 # Combine options
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -i document.tex -o output/ -c
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -i document.tex -o output/ -c
 ```
 
 ## Available Tags
@@ -299,36 +299,36 @@ chmod -R 755 .
 **Missing Packages:**
 ```bash
 # Check if package is available
-docker run --rm ghcr.io/[your-username]/latex-compiler:latest tlmgr search <package-name>
+docker run --rm ghcr.io/mattiabertorello/latex-compiler:latest tlmgr search <package-name>
 
 # Install additional packages (temporary)
-docker run --rm -it -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest bash
+docker run --rm -it -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest bash
 # Inside container: tlmgr install <package-name>
 ```
 
 **Compilation Errors:**
 ```bash
 # Use the helper script for better error reporting
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest compile.sh -i your-file.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest compile.sh -i your-file.tex
 
 # Check log files
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest cat main.log
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest cat main.log
 ```
 
 **Large Files:**
 ```bash
 # For documents with many images, increase Docker memory if needed
-docker run --rm -v $(pwd):/data --memory=2g ghcr.io/[your-username]/latex-compiler:latest compile.sh
+docker run --rm -v $(pwd):/data --memory=2g ghcr.io/mattiabertorello/latex-compiler:latest compile.sh
 ```
 
 ### Debugging Compilation
 
 ```bash
 # Run with verbose output using direct pdflatex
-docker run --rm -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest pdflatex -interaction=nonstopmode -file-line-error main.tex
+docker run --rm -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest pdflatex -interaction=nonstopmode -file-line-error main.tex
 
 # Interactive debugging
-docker run --rm -it -v $(pwd):/data ghcr.io/[your-username]/latex-compiler:latest bash
+docker run --rm -it -v $(pwd):/data ghcr.io/mattiabertorello/latex-compiler:latest bash
 ```
 
 ## Building Custom Images
