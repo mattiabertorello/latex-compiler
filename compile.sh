@@ -1,102 +1,91 @@
-  #!/bin/bash
+#!/bin/bash
 
-  set -e
+# LaTeX compilation helper script
+set -e
 
-  # Colors for output
-  RED='\033[0;31m'
-  GREEN='\033[0;32m'
-  YELLOW='\033[1;33m'
-  NC='\033[0m' # No Color
+# Default values
+INPUT_FILE="main.tex"
+OUTPUT_DIR="."
+CLEAN_FILES=false
+COMPILER="pdflatex"
 
-  # Default values
-  INPUT_FILE="main.tex"
-  OUTPUT_DIR="."
-  CLEAN=false
+# Function to display help
+show_help() {
+    cat << EOF
+LaTeX Compilation Helper Script
 
-  # Function to display usage
-  usage() {
-      echo "Usage: $0 [OPTIONS]"
-      echo "Options:"
-      echo "  -i, --input FILE     Input LaTeX file (default: main.tex)"
-      echo "  -o, --output DIR     Output directory (default: current directory)"
-      echo "  -c, --clean          Clean auxiliary files after compilation"
-      echo "  -h, --help           Display this help message"
-      exit 1
-  }
+Usage: compile.sh [OPTIONS]
 
-  # Function to clean auxiliary files
-  clean_files() {
-      local base_name=$(basename "$INPUT_FILE" .tex)
-      echo -e "${YELLOW}Cleaning auxiliary files...${NC}"
-      rm -f "$base_name.aux" "$base_name.log" "$base_name.out" "$base_name.fls" "$base_name.fdb_latexmk" "$base_name.synctex.gz"
-  }
+Options:
+    -i, --input FILE     Input LaTeX file (default: main.tex)
+    -o, --output DIR     Output directory (default: current directory)
+    -c, --clean          Clean auxiliary files after compilation
+    -e, --engine ENGINE  LaTeX engine (pdflatex, xelatex, lualatex) (default: pdflatex)
+    -h, --help           Display this help message
 
-  # Parse command line arguments
-  while [[ $# -gt 0 ]]; do
-      case $1 in
-          -i|--input)
-              INPUT_FILE="$2"
-              shift 2
-              ;;
-          -o|--output)
-              OUTPUT_DIR="$2"
-              shift 2
-              ;;
-          -c|--clean)
-              CLEAN=true
-              shift
-              ;;
-          -h|--help)
-              usage
-              ;;
-          *)
-              echo -e "${RED}Unknown option: $1${NC}"
-              usage
-              ;;
-      esac
-  done
+Examples:
+    compile.sh -i document.tex -c
+    compile.sh --input report.tex --output ./build --clean
+    compile.sh -i thesis.tex -e xelatex
+EOF
+}
 
-  # Check if input file exists
-  if [[ ! -f "$INPUT_FILE" ]]; then
-      echo -e "${RED}Error: Input file '$INPUT_FILE' not found${NC}"
-      exit 1
-  fi
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -i|--input)
+            INPUT_FILE="$2"
+            shift 2
+            ;;
+        -o|--output)
+            OUTPUT_DIR="$2"
+            shift 2
+            ;;
+        -c|--clean)
+            CLEAN_FILES=true
+            shift
+            ;;
+        -e|--engine)
+            COMPILER="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
 
-  # Create output directory if it doesn't exist
-  mkdir -p "$OUTPUT_DIR"
+# Check if input file exists
+if [[ ! -f "$INPUT_FILE" ]]; then
+    echo "Error: Input file '$INPUT_FILE' not found!"
+    exit 1
+fi
 
-  # Get base name without extension
-  BASE_NAME=$(basename "$INPUT_FILE" .tex)
+# Create output directory if it doesn't exist
+mkdir -p "$OUTPUT_DIR"
 
-  echo -e "${GREEN}Compiling LaTeX document: $INPUT_FILE${NC}"
+# Get the base name without extension
+BASENAME=$(basename "$INPUT_FILE" .tex)
 
-  # First compilation pass
-  echo -e "${YELLOW}Running first pdflatex pass...${NC}"
-  if ! pdflatex -interaction=nonstopmode -output-directory="$OUTPUT_DIR" "$INPUT_FILE"; then
-      echo -e "${RED}Error: First compilation pass failed${NC}"
-      exit 1
-  fi
+echo "Compiling $INPUT_FILE with $COMPILER..."
 
-  # Second compilation pass (for references, TOC, etc.)
-  echo -e "${YELLOW}Running second pdflatex pass...${NC}"
-  if ! pdflatex -interaction=nonstopmode -output-directory="$OUTPUT_DIR" "$INPUT_FILE"; then
-      echo -e "${RED}Error: Second compilation pass failed${NC}"
-      exit 1
-  fi
+# Compile the document
+if [[ "$OUTPUT_DIR" != "." ]]; then
+    $COMPILER -output-directory="$OUTPUT_DIR" "$INPUT_FILE"
+else
+    $COMPILER "$INPUT_FILE"
+fi
 
-  # Check if PDF was generated
-  PDF_FILE="$OUTPUT_DIR/$BASE_NAME.pdf"
-  if [[ -f "$PDF_FILE" ]]; then
-      echo -e "${GREEN}✓ Compilation successful!${NC}"
-      echo -e "${GREEN}PDF generated: $PDF_FILE${NC}"
-  else
-      echo -e "${RED}Error: PDF file was not generated${NC}"
-      exit 1
-  fi
+# Clean auxiliary files if requested
+if [[ "$CLEAN_FILES" == true ]]; then
+    echo "Cleaning auxiliary files..."
+    rm -f "$OUTPUT_DIR/$BASENAME".{aux,log,out,toc,lof,lot,fls,fdb_latexmk,synctex.gz,bbl,blg,idx,ind,ilg,glo,gls,glg,acn,acr,alg}
+fi
 
-  # Clean auxiliary files if requested
-  if [[ "$CLEAN" == true ]]; then
-      clean_files
-  fi
-
-  echo -e "${GREEN}Done!${NC}"
+echo "Compilation completed successfully!"

@@ -78,7 +78,7 @@ RUN export $(grep -v '^#' /etc/environment | xargs -d '\n') && \
     echo "PATH=/usr/texbin:$PATH" >> /etc/environment
 
 # Set PATH for TeX Live
-ENV PATH="/usr/texbin:$PATH"
+ENV PATH="/usr/texbin:/usr/local/bin/:$PATH"
 
 VOLUME ["/data"]
 
