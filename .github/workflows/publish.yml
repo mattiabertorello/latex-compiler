@@ -156,20 +156,44 @@ jobs:
       - name: Clean up old Docker images
         run: |
           # Get repository name in lowercase for GHCR
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           
-          echo "Fetching all package versions..."
+          echo "Fetching all package versions for $OWNER/$REPO_NAME..."
 
-          # First, let's check the actual response format
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions?per_page=100")
+          # First, check if this is a user or organization package
+          ORG_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/orgs/$OWNER")
+          
+          if [[ $(echo "$ORG_RESPONSE" | jq -r '.message // ""') == "Not Found" ]]; then
+            # This is a user package
+            echo "Repository belongs to a user account"
+            API_URL="https://api.github.com/user/packages/container/$REPO_NAME/versions?per_page=100"
+          else
+            # This is an organization package
+            echo "Repository belongs to an organization account"
+            API_URL="https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions?per_page=100"
+          fi
+          
+          echo "Using API URL: $API_URL"
+          
+          # Fetch package versions
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
 
           # Check if the response is valid JSON and contains data
           if ! echo "$RESPONSE" | jq -e . > /dev/null 2>&1; then
             echo "Error: Invalid JSON response from GitHub API"
             echo "Response: $RESPONSE"
             exit 1
+          fi
+          
+          # Check if we got an error message
+          ERROR_MESSAGE=$(echo "$RESPONSE" | jq -r '.message // ""')
+          if [[ -n "$ERROR_MESSAGE" ]]; then
+            echo "Error from GitHub API: $ERROR_MESSAGE"
+            echo "Full response: $RESPONSE"
+            echo "Skipping cleanup due to API error"
+            exit 0
           fi
           
           # Check if we got an array of package versions
@@ -181,6 +205,12 @@ jobs:
 
           # Process the response with proper error handling
           PACKAGE_VERSIONS=$(echo "$RESPONSE" | jq -r '.[] | {id: .id, created_at: .created_at, digest: .name, tags: (.metadata.container.tags // [])}')
+
+          # Check if we have any versions
+          if [[ -z "$PACKAGE_VERSIONS" ]]; then
+            echo "No package versions found to clean up"
+            exit 0
+          fi
 
           # Sort versions by creation date (newest first)
           SORTED_VERSIONS=$(echo "$PACKAGE_VERSIONS" | jq -s 'sort_by(.created_at) | reverse')
@@ -210,10 +240,20 @@ jobs:
           # Delete older versions
           for ID in $DELETE_IDS; do
             echo "Deleting package version ID: $ID"
+          
+            # Use the appropriate API endpoint based on user/org determination
+            if [[ $(echo "$ORG_RESPONSE" | jq -r '.message // ""') == "Not Found" ]]; then
+              # User package
+              DELETE_URL="https://api.github.com/user/packages/container/$REPO_NAME/versions/$ID"
+            else
+              # Organization package
+              DELETE_URL="https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions/$ID"
+            fi
+          
             curl -X DELETE \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions/$ID"
+              "$DELETE_URL"
 
             # Add a small delay to avoid rate limiting
             sleep 1
