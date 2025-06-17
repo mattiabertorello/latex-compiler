@@ -11,13 +11,8 @@ on:
       min_base_versions_to_keep:
         description: 'Minimum versions to keep for base package'
         required: false
-        default: '5'
+        default: '10'
         type: string
-      delete_only_untagged:
-        description: 'Delete only untagged versions'
-        required: false
-        default: true
-        type: boolean
       force_cleanup:
         description: 'Force aggressive cleanup (removes more versions)'
         required: false
@@ -33,13 +28,8 @@ on:
       min_base_versions_to_keep:
         description: 'Minimum versions to keep for base package'
         required: false
-        default: '5'
+        default: '10'
         type: string
-      delete_only_untagged:
-        description: 'Delete only untagged versions'
-        required: false
-        default: true
-        type: boolean
       force_cleanup:
         description: 'Force aggressive cleanup (removes more versions)'
         required: false
@@ -65,15 +55,13 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "min_versions=${{ inputs.min_versions_to_keep }}" >> $GITHUB_OUTPUT
             echo "min_base_versions=${{ inputs.min_base_versions_to_keep }}" >> $GITHUB_OUTPUT
-            echo "delete_untagged_only=${{ inputs.delete_only_untagged }}" >> $GITHUB_OUTPUT
             if [ "${{ inputs.force_cleanup }}" = "true" ]; then
               echo "min_versions=3" >> $GITHUB_OUTPUT
-              echo "min_base_versions=2" >> $GITHUB_OUTPUT
+              echo "min_base_versions=3" >> $GITHUB_OUTPUT
             fi
           else
             echo "min_versions=10" >> $GITHUB_OUTPUT
-            echo "min_base_versions=5" >> $GITHUB_OUTPUT
-            echo "delete_untagged_only=true" >> $GITHUB_OUTPUT
+            echo "min_base_versions=10" >> $GITHUB_OUTPUT
           fi
 
       - name: Login to GitHub Container Registry
@@ -83,22 +71,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Delete old package versions
+      - name: Delete all untagged package versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'latex-compiler'
+          package-type: 'container'
+          min-versions-to-keep: 0
+          delete-only-untagged-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old tagged package versions (keep only 10 most recent)
         uses: actions/delete-package-versions@v5
         with:
           package-name: 'latex-compiler'
           package-type: 'container'
           min-versions-to-keep: ${{ steps.params.outputs.min_versions }}
-          delete-only-untagged-versions: ${{ steps.params.outputs.delete_untagged_only }}
+          delete-only-untagged-versions: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Delete old package versions (base image)
+      - name: Delete all untagged package versions (base image)
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'latex-compiler/base'
+          package-type: 'container'
+          min-versions-to-keep: 0
+          delete-only-untagged-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Delete old tagged package versions (base image, keep only 10 most recent)
         uses: actions/delete-package-versions@v5
         with:
           package-name: 'latex-compiler/base'
           package-type: 'container'
           min-versions-to-keep: ${{ steps.params.outputs.min_base_versions }}
-          delete-only-untagged-versions: ${{ steps.params.outputs.delete_untagged_only }}
+          delete-only-untagged-versions: false
           token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
@@ -110,8 +117,9 @@ jobs:
       - name: Report cleanup completion
         run: |
           echo "✅ Cleanup completed successfully"
-          echo "- Removed old package versions (kept ${{ steps.params.outputs.min_versions }} main, ${{ steps.params.outputs.min_base_versions }} base)"
-          echo "- Delete untagged only: ${{ steps.params.outputs.delete_untagged_only }}"
+          echo "- Deleted ALL untagged versions"
+          echo "- Kept ${{ steps.params.outputs.min_versions }} most recent tagged versions (main package)"
+          echo "- Kept ${{ steps.params.outputs.min_base_versions }} most recent tagged versions (base package)"
           echo "- Cleaned up Docker system resources"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "- Triggered manually with custom parameters"
