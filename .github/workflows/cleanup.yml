@@ -1,10 +1,28 @@
-name: Cleanup
+name: Cleanup Docker packages
 
 on:
   workflow_call:
-    secrets:
-      GITHUB_TOKEN:
+    inputs:
+      min_versions_to_keep:
+        description: 'Minimum versions to keep for main package'
         required: false
+        default: '10'
+        type: string
+      min_base_versions_to_keep:
+        description: 'Minimum versions to keep for base package'
+        required: false
+        default: '5'
+        type: string
+      delete_only_untagged:
+        description: 'Delete only untagged versions'
+        required: false
+        default: true
+        type: boolean
+      force_cleanup:
+        description: 'Force aggressive cleanup (removes more versions)'
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       min_versions_to_keep:
