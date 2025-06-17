@@ -64,7 +64,7 @@ jobs:
       - name: Build and push base image
         if: steps.check-base.outputs.skip != 'true'
         id: build-base
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./base.Dockerfile
@@ -82,7 +82,7 @@ jobs:
       # Build a small image just to extract the TeX Live version
       - name: Build and extract TeX Live version
         id: texlive-version
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./base.Dockerfile
@@ -184,7 +184,7 @@ jobs:
       - name: Build and push variant image
         if: steps.check.outputs.skip != 'true'
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -213,7 +213,7 @@ jobs:
 
       - name: Build temp image for manifest generation
         if: steps.check.outputs.skip != 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile

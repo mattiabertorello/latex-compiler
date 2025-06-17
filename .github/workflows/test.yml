@@ -85,7 +85,7 @@ jobs:
           echo "🎉 All tests passed for variant: ${{ matrix.variant }}"
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.variant }}
           path: test-results/${{ matrix.variant }}/
