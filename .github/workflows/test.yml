@@ -41,10 +41,12 @@ jobs:
           # For testing, we need to use the variant images, not the base image
           # The variant images are tagged with the commit SHA and variant suffix
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            TAG="pr-${{ github.event.number }}${{ matrix.tags_suffix }}"
+            # Match the format used in build.yml: type=ref,event=pr,suffix=${{ matrix.tags_suffix }}
+            TAG="pr-${{ github.event.number }}-${{ matrix.variant }}"
           else
-            # Use the commit SHA format that matches the build workflow
-            TAG="${{ github.ref_name }}-${{ github.sha }}${{ matrix.tags_suffix }}"
+            # Use the short SHA format
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            TAG="${{ github.ref_name }}-${SHORT_SHA}${{ matrix.tags_suffix }}"
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "Using image tag: ${TAG}"
