@@ -55,7 +55,7 @@ jobs:
           IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image-tag.outputs.tag }}"
           echo "Attempting to pull image: ${IMAGE_TAG}"
           
-          if docker pull "${IMAGE_TAG}}"; then
+          if docker pull "${IMAGE_TAG}"; then
             echo "✅ Successfully pulled image: ${IMAGE_TAG}"
             echo "image_available=true" >> $GITHUB_OUTPUT
           else
