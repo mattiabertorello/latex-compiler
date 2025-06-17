@@ -159,46 +159,45 @@ jobs:
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           KEEP_LAST_N=5  # Define how many recent images to keep
-          
+
           echo "Fetching all package versions for $OWNER/$REPO_NAME..."
 
           # First, check if this is a user or organization package
           ORG_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/orgs/$OWNER")
-          
+
+          # Determine if repository belongs to user or organization
           if [[ $(echo "$ORG_RESPONSE" | jq -r 'if has("message") then .message else "" end') == "Not Found" ]]; then
-            # This is a user package
             echo "Repository belongs to a user account"
             API_URL="https://api.github.com/user/packages/container/$REPO_NAME/versions?per_page=100"
           else
-            # This is an organization package
             echo "Repository belongs to an organization account"
             API_URL="https://api.github.com/orgs/$OWNER/packages/container/$REPO_NAME/versions?per_page=100"
           fi
-          
+
           echo "Using API URL: $API_URL"
-          
+
           # Fetch package versions
           RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
 
-          # Check if the response is valid JSON and contains data
+          # Check if the response is valid JSON
           if ! echo "$RESPONSE" | jq -e . > /dev/null 2>&1; then
             echo "Error: Invalid JSON response from GitHub API"
             echo "Response: $RESPONSE"
             exit 1
           fi
-          
+
           # Check if we got an error message (only if response is an object)
           if echo "$RESPONSE" | jq 'type' | grep -q "object"; then
-          ERROR_MESSAGE=$(echo "$RESPONSE" | jq -r 'if has("message") then .message else "" end')
-          if [[ -n "$ERROR_MESSAGE" ]]; then
-            echo "Error from GitHub API: $ERROR_MESSAGE"
-            echo "Full response: $RESPONSE"
-            echo "Skipping cleanup due to API error"
-            exit 0
+            ERROR_MESSAGE=$(echo "$RESPONSE" | jq -r 'if has("message") then .message else "" end')
+            if [[ -n "$ERROR_MESSAGE" ]]; then
+              echo "Error from GitHub API: $ERROR_MESSAGE"
+              echo "Full response: $RESPONSE"
+              echo "Skipping cleanup due to API error"
+              exit 0
+            fi
           fi
-          fi
-          
+
           # Check if we got an array of package versions
           if [ "$(echo "$RESPONSE" | jq 'type')" != '"array"' ]; then
             echo "Error: Unexpected response format from GitHub API"
@@ -218,33 +217,60 @@ jobs:
 
           # Sort versions by creation date (newest first)
           SORTED_VERSIONS=$(echo "$PACKAGE_VERSIONS" | jq -s 'sort_by(.created_at) | reverse')
-          
-          # Keep the latest N non-base images and delete the rest
+
           echo "Identifying images to keep and delete..."
-          
-          # Keep all images that don't have "-base" in their tags
-          KEEP_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base") | not) | all) | .id' | head -n $KEEP_LAST_N)
-          
+
+          # Separate tagged and untagged images
+          TAGGED_VERSIONS=$(echo "$SORTED_VERSIONS" | jq '[.[] | select(.tags | length > 0)]')
+          UNTAGGED_VERSIONS=$(echo "$SORTED_VERSIONS" | jq '[.[] | select(.tags | length == 0)]')
+
+          echo "Found $(echo "$TAGGED_VERSIONS" | jq 'length') tagged images"
+          echo "Found $(echo "$UNTAGGED_VERSIONS" | jq 'length') untagged images"
+
+          # Keep the latest N non-base images
+          KEEP_REGULAR_IDS=$(echo "$TAGGED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base") | not) | all) | .id' | head -n $KEEP_LAST_N)
+
           # Also keep the latest base image
-          LATEST_BASE_ID=$(echo "$SORTED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base")) | any) | .id' | head -n 1)
-          
+          LATEST_BASE_ID=$(echo "$TAGGED_VERSIONS" | jq -r '.[] | select(.tags | map(contains("-base")) | any) | .id' | head -n 1)
+
           # Combine IDs to keep
-          ALL_KEEP_IDS="$KEEP_IDS $LATEST_BASE_ID"
-          
-          # Get all IDs
-          ALL_IDS=$(echo "$SORTED_VERSIONS" | jq -r '.[].id')
-          
-          # Find IDs to delete (those not in the keep list)
-          DELETE_IDS=$(comm -23 <(echo "$ALL_IDS" | sort) <(echo "$ALL_KEEP_IDS" | tr ' ' '\n' | sort))
-          
+          ALL_KEEP_IDS="$KEEP_REGULAR_IDS $LATEST_BASE_ID"
+
+          # Get all tagged IDs
+          ALL_TAGGED_IDS=$(echo "$TAGGED_VERSIONS" | jq -r '.[].id')
+
+          # Get all untagged IDs (all will be deleted)
+          ALL_UNTAGGED_IDS=$(echo "$UNTAGGED_VERSIONS" | jq -r '.[].id')
+
+          # Find tagged IDs to delete (those not in the keep list)
+          DELETE_TAGGED_IDS=$(comm -23 <(echo "$ALL_TAGGED_IDS" | sort) <(echo "$ALL_KEEP_IDS" | tr ' ' '\n' | sort))
+
+          # Combine all IDs to delete
+          DELETE_IDS="$DELETE_TAGGED_IDS $ALL_UNTAGGED_IDS"
+
           # Count versions to delete
-          DELETE_COUNT=$(echo "$DELETE_IDS" | wc -l)
-          echo "Deleting $DELETE_COUNT older versions"
-          
+          DELETE_COUNT=$(echo "$DELETE_IDS" | wc -w)
+          echo "Planning to delete $DELETE_COUNT versions ($(echo "$DELETE_TAGGED_IDS" | wc -w) old tagged, $(echo "$ALL_UNTAGGED_IDS" | wc -w) untagged)"
+
+          # Print details of images that will be kept
+          echo "=== IMAGES TO KEEP ==="
+          echo "$SORTED_VERSIONS" | jq -r '.[] | select(.id | IN('"$(echo "$ALL_KEEP_IDS" | tr ' ' ',' | sed 's/^/"/;s/$/"/;s/,/","/g')"')) | "ID: \(.id), Created: \(.created_at), Tags: \(.tags | join(", "))"'
+
+          # Print details of images that will be deleted
+          echo "=== IMAGES TO DELETE ==="
+          echo "$SORTED_VERSIONS" | jq -r '.[] | select(.id | IN('"$(echo "$DELETE_IDS" | tr ' ' ',' | sed 's/^/"/;s/$/"/;s/,/","/g')"')) | "ID: \(.id), Created: \(.created_at), Tags: \(.tags | join(", "))"'
+
+          # Confirm before proceeding
+          echo "Proceeding with deletion of $DELETE_COUNT images..."
+
           # Delete older versions
           for ID in $DELETE_IDS; do
+            if [[ -z "$ID" ]]; then
+              continue
+            fi
+
             echo "Deleting package version ID: $ID"
-          
+
             # Use the appropriate API endpoint based on user/org determination
             if [[ $(echo "$ORG_RESPONSE" | jq -r 'if has("message") then .message else "" end') == "Not Found" ]]; then
               # User package
@@ -262,5 +288,5 @@ jobs:
             # Add a small delay to avoid rate limiting
             sleep 1
           done
-          
-          echo "Cleanup complete. Kept the latest $KEEP_LAST_N versions and the latest base image."
+
+          echo "Cleanup complete. Kept the latest $KEEP_LAST_N regular tagged images and the latest base image."

@@ -33,7 +33,7 @@ jobs:
             ORG_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/orgs/$OWNER")
           
-            if [[ $(echo "$ORG_RESPONSE" | jq -r '.message // ""') == "Not Found" ]]; then
+            if [[ $(echo "$ORG_RESPONSE" | jq -r 'if has("message") then .message else "" end') == "Not Found" ]]; then
               echo "Repository belongs to a user account"
               API_URL="https://api.github.com/user/packages/container/$REPO_NAME/versions?per_page=100"
               BASE_DELETE_URL="https://api.github.com/user/packages/container/$REPO_NAME/versions"
