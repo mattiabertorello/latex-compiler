@@ -254,11 +254,19 @@ jobs:
 
           # Print details of images that will be kept
           echo "=== IMAGES TO KEEP ==="
-          echo "$SORTED_VERSIONS" | jq -r '.[] | select(.id | IN('"$(echo "$ALL_KEEP_IDS" | tr ' ' ',' | sed 's/^/"/;s/$/"/;s/,/","/g')"')) | "ID: \(.id), Created: \(.created_at), Tags: \(.tags | join(", "))"'
+          for id in $ALL_KEEP_IDS; do
+            if [[ -n "$id" ]]; then
+              echo "$SORTED_VERSIONS" | jq -r '.[] | select(.id == '"$id"') | "ID: \(.id), Created: \(.created_at), Tags: \(.tags | join(", "))"'
+            fi
+          done
 
           # Print details of images that will be deleted
           echo "=== IMAGES TO DELETE ==="
-          echo "$SORTED_VERSIONS" | jq -r '.[] | select(.id | IN('"$(echo "$DELETE_IDS" | tr ' ' ',' | sed 's/^/"/;s/$/"/;s/,/","/g')"')) | "ID: \(.id), Created: \(.created_at), Tags: \(.tags | join(", "))"'
+          for id in $DELETE_IDS; do
+            if [[ -n "$id" ]]; then
+              echo "$SORTED_VERSIONS" | jq -r '.[] | select(.id == '"$id"') | "ID: \(.id), Created: \(.created_at), Tags: \(.tags | join(", "))"'
+            fi
+          done
 
           # Confirm before proceeding
           echo "Proceeding with deletion of $DELETE_COUNT images..."
