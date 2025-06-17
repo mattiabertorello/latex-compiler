@@ -13,6 +13,9 @@ collection-fontsrecommended 1
 # Enable collection of LaTeX packages
 collection-latex 1
 
+# Enable language support
+collection-langenglish 1
+
 # Disable installation of documentation
 option_doc 0
 

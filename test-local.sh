@@ -115,7 +115,7 @@ build_image() {
     else
         print_error "Failed to build ${variant} variant"
         echo -e "${RED}Build log (last 20 lines):${NC}"
-        tail -20 "${log_file}"
+        tail -50 "${log_file}"
         return 1
     fi
 }
@@ -160,9 +160,8 @@ run_test_suite() {
 
             # Run compilation with timeout
             local compile_log="${results_dir}/${base_name}-compile.log"
-            if timeout 300 docker run --rm -v $(pwd):/data "${image_tag}" \
-               bash -c "compile.sh -i ${base_name}.tex -c" > "${compile_log}" 2>&1; then
-
+            if docker run --rm -v $(pwd):/data "${image_tag}" \
+               bash -c "timeout 300 /usr/local/bin/compile.sh -i ${base_name}.tex -c || exit 1" > "${compile_log}" 2>&1; then
                 # Check if PDF was generated
                 if [ -f "${base_name}.pdf" ]; then
                     print_success "    ✅ ${test_name} - PDF generated"

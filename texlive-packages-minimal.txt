@@ -33,14 +33,11 @@ parskip
 # Enhanced math formatting and environments
 amsmath
 
-# Handles inclusion of graphics/images
-graphicx
+# Basic graphics inclusion capabilities
+graphics
 
 # Improves typography with micro-adjustments
 microtype
-
-# Font selection for XeLaTeX and LuaLaTeX
-fontspec
 
 # Multilingual support
 babel
